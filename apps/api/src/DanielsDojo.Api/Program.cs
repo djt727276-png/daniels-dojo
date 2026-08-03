@@ -1,4 +1,6 @@
+using DanielsDojo.Api.Authentication;
 using DanielsDojo.Api.Hosting;
+using DanielsDojo.Application.Identity;
 using DanielsDojo.Application.System;
 using DanielsDojo.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -23,6 +25,9 @@ builder.Services.AddOpenApi();
 // Persistence. Registration opens no connection and never migrates or seeds.
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Entra External ID bearer validation plus local, database-backed application authorization.
+builder.Services.AddDanielsDojoAuthentication(builder.Configuration);
+
 // System-status vertical slice: injectable time + host-environment abstraction.
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IApplicationEnvironment, HostApplicationEnvironment>();
@@ -35,6 +40,13 @@ var app = builder.Build();
 if (DatabaseCommand.Matches(args))
 {
     return await DatabaseCommand.ExecuteAsync(app, args);
+}
+
+// "identity grant-admin --user-id <guid> --reason "..." --confirm". There is deliberately no
+// HTTP route that can grant Admin.
+if (IdentityCommand.Matches(args))
+{
+    return await IdentityCommand.ExecuteAsync(app, args);
 }
 
 // Centralized exception handling produces RFC 7807 ProblemDetails responses and
@@ -52,10 +64,35 @@ if (app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+app.UseCors(AuthenticationRegistration.CorsPolicy);
+
+// Order matters: authenticate the token, resolve or provision the local user, then authorize
+// against the local database's roles. Anonymous requests pass through the middle stage
+// untouched, so the public routes below never trigger provisioning.
+app.UseAuthentication();
+app.UseMiddleware<LocalUserProvisioningMiddleware>();
+app.UseAuthorization();
+
 // Versioned, unauthenticated system-status endpoint.
 var apiV1 = app.MapGroup("/api/v1");
 apiV1.MapGet("/system/status",
-    (ISystemStatusService statusService) => TypedResults.Ok(statusService.GetStatus()));
+    (ISystemStatusService statusService) => TypedResults.Ok(statusService.GetStatus()))
+    .AllowAnonymous();
+
+// Authenticated session view. Every value comes from the local user record resolved by the
+// provisioning middleware, never from the token.
+apiV1.MapGet("/auth/session", (ICurrentUser currentUser) =>
+{
+    var user = currentUser.User!;
+    return TypedResults.Ok(
+        new SessionResponse(user.UserId, user.DisplayName, user.Email, user.RoleNames));
+})
+    .RequireAuthorization(AuthenticationRegistration.StudentPolicy);
+
+// Admin smoke endpoint: proves the local Admin role gate works end to end.
+apiV1.MapGet("/admin/session", (TimeProvider timeProvider) =>
+    TypedResults.Ok(new AdminSessionResponse("ok", timeProvider.GetUtcNow())))
+    .RequireAuthorization(AuthenticationRegistration.AdminPolicy);
 
 // Liveness: succeeds whenever the process is running (no dependency checks run).
 app.MapHealthChecks("/health/live", new HealthCheckOptions

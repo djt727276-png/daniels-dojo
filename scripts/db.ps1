@@ -83,7 +83,13 @@ function Get-LocalPassword {
     try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
     $generated = 'Dd1!' + ([Convert]::ToBase64String($bytes) -replace '[^A-Za-z0-9]', '')
 
-    Set-Content -Path $PasswordFile -Value $generated -Encoding utf8 -NoNewline
+    # Written without a byte-order mark. Set-Content -Encoding utf8 emits a BOM on Windows
+    # PowerShell; PowerShell strips it on read but Bash does not, so a database created with
+    # this script would then fail to authenticate from scripts/db.sh.
+    [System.IO.File]::WriteAllText(
+        $PasswordFile,
+        $generated,
+        (New-Object System.Text.UTF8Encoding $false))
     Write-Host "Generated a new development-only SQL password at $PasswordFile (git-ignored)."
     return $generated
 }

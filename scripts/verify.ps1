@@ -103,6 +103,8 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $ScriptOutput) | O
 Invoke-Checked { dotnet ef migrations script --idempotent --project $InfraProject --startup-project $InfraProject --no-build --configuration $BuildConfig --output $ScriptOutput }
 Write-Host "    wrote $ScriptOutput (git-ignored)"
 
+# Covers the Phase 3 authentication and authorization suites too. Those issue locally signed
+# JWTs, so no Entra tenant or internet access is ever required.
 Write-Host '==> [9/13] Run .NET tests (Release, no build) -- includes real SQL Server'
 Invoke-Checked { dotnet test $Solution --configuration $BuildConfig --no-build }
 

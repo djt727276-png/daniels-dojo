@@ -52,7 +52,10 @@ require_docker() {
 # Creates the development-only password once and reuses it thereafter.
 get_password() {
   if [ -s "$PASSWORD_FILE" ]; then
-    tr -d '\r\n' < "$PASSWORD_FILE"
+    # Strips a UTF-8 byte-order mark as well as line endings. Older versions of
+    # scripts/db.ps1 wrote the file with a BOM, which PowerShell hides on read but Bash would
+    # otherwise send as part of the password, producing a confusing "Login failed" error.
+    sed '1s/^\xEF\xBB\xBF//' "$PASSWORD_FILE" | tr -d '\r\n'
     return
   fi
 

@@ -70,6 +70,8 @@ dotnet ef migrations script --idempotent --project "$INFRA_PROJECT" \
   --output "$SCRIPT_OUTPUT"
 echo "    wrote $SCRIPT_OUTPUT (git-ignored)"
 
+# Covers the Phase 3 authentication and authorization suites too. Those issue locally signed
+# JWTs, so no Entra tenant or internet access is ever required.
 echo "==> [9/13] Run .NET tests (Release, no build) — includes real SQL Server"
 dotnet test "$SOLUTION" --configuration "$BUILD_CONFIG" --no-build
 

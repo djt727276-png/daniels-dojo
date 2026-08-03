@@ -1,0 +1,51 @@
+<section class="account" aria-labelledby="account-title">
+  <h1 id="account-title" class="account__title">Your account</h1>
+
+  @if (!isConfigured()) {
+    <p class="account__notice" role="status">
+      Sign-in is not configured for this environment yet. Add the Entra External ID settings
+      described in the Phase 3 documentation to enable it.
+    </p>
+  } @else {
+    @switch (state().kind) {
+      @case ('loading') {
+        <p class="account__notice" role="status" aria-live="polite">Checking your session…</p>
+      }
+
+      @case ('signedOut') {
+        <p class="account__lead">Sign in or create an account to continue.</p>
+        <button type="button" class="account__action" (click)="signIn()">Sign up or sign in</button>
+      }
+
+      @case ('signedIn') {
+        <dl class="account__details">
+          <dt>Name</dt>
+          <dd data-testid="account-name">{{ session()?.displayName }}</dd>
+          <dt>Email</dt>
+          <dd data-testid="account-email">{{ session()?.email }}</dd>
+          <dt>Roles</dt>
+          <dd data-testid="account-roles">{{ session()?.roles?.join(', ') }}</dd>
+        </dl>
+
+        @if (isAdmin()) {
+          <p class="account__admin" data-testid="admin-available">You have administrator access.</p>
+        }
+
+        <button type="button" class="account__action" (click)="signOut()">Sign out</button>
+      }
+
+      @case ('forbidden') {
+        <p class="account__notice" role="alert">
+          Your account is signed in but cannot access Daniel's Dojo. Contact support if you think
+          this is a mistake.
+        </p>
+        <button type="button" class="account__action" (click)="signOut()">Sign out</button>
+      }
+
+      @default {
+        <p class="account__notice" role="alert">We could not load your account just now.</p>
+        <button type="button" class="account__action" (click)="retry()">Try again</button>
+      }
+    }
+  }
+</section>

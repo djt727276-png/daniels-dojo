@@ -89,8 +89,10 @@ public sealed class DatabaseHealthTests(SqlServerDatabaseFixture fixture)
             Environment.SetEnvironmentVariable(ConnectionStringVariable, connectionString);
         }
 
+        // Staging, not Production: these tests exercise authentication-disabled mode, which a
+        // Production host deliberately refuses to start in.
         protected override void ConfigureWebHost(IWebHostBuilder builder)
-            => builder.UseEnvironment("Production");
+            => builder.UseEnvironment("Staging");
 
         protected override void Dispose(bool disposing)
         {

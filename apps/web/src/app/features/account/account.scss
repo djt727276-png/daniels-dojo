@@ -1,0 +1,63 @@
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 40rem;
+}
+
+.account__title {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.account__lead,
+.account__notice {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.account__notice {
+  color: #44403c;
+}
+
+.account__details {
+  display: grid;
+  grid-template-columns: minmax(6rem, auto) 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0;
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.account__admin {
+  margin: 0;
+  font-weight: 600;
+}
+
+.account__action {
+  align-self: flex-start;
+  padding: 0.6rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background-color: #1f2937;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #111827;
+  }
+
+  &:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+  }
+}

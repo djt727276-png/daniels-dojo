@@ -1,3 +1,5 @@
+using DanielsDojo.Application.Identity;
+using DanielsDojo.Infrastructure.Identity;
 using DanielsDojo.Infrastructure.Persistence;
 using DanielsDojo.Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +49,8 @@ public static class DependencyInjection
         });
 
         services.AddScoped<DatabaseSeeder>();
+        services.AddScoped<IUserProvisioningService, UserProvisioningService>();
+        services.AddScoped<AdminRoleGrantService>();
 
         return services;
     }

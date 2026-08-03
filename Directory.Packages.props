@@ -33,6 +33,11 @@
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.10" />
   </ItemGroup>
 
+  <ItemGroup Label="Authentication (Phase 3)">
+    <!-- Entra External ID bearer validation. Brings the Microsoft.IdentityModel stack with it. -->
+    <PackageVersion Include="Microsoft.Identity.Web" Version="4.14.2" />
+  </ItemGroup>
+
   <ItemGroup Label="Database test toolchain (Phase 2)">
     <!-- Real SQL Server for schema/constraint tests. No SQLite or InMemory provider. -->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.13.0" />

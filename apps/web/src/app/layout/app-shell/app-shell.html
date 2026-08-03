@@ -5,6 +5,10 @@
     <span class="app-header__brand">{{ productName }}</span>
     <nav class="app-header__nav" aria-label="Primary">
       <a routerLink="/" class="app-header__link">Home</a>
+      <a routerLink="/account" class="app-header__link" data-testid="nav-account">Account</a>
+      @if (isAdmin()) {
+        <a routerLink="/admin" class="app-header__link" data-testid="nav-admin">Admin</a>
+      }
     </nav>
   </div>
 </header>

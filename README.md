@@ -106,6 +106,27 @@ The `development` seed profile is refused unless the host environment is exactly
 `Development`. See [`docs/architecture/phase-2-data-design.md`](docs/architecture/phase-2-data-design.md)
 for the schema, invariants, and seed contents.
 
+## Authentication
+
+Customer sign-up and sign-in run through **Entra External ID**; Daniel's Dojo stores no
+password or password hash. Application permissions come from the local database, never from a
+token claim, and the API is the authorization boundary.
+
+Sign-in ships **disabled with placeholder configuration** — no tenant or client ID is invented.
+Supply the public identifiers per environment to switch it on. Setup, claim mapping, the
+401-versus-403 contract, the audited administrator-grant command, and the manual live
+acceptance sequence are documented in
+[`docs/architecture/phase-3-authentication.md`](docs/architecture/phase-3-authentication.md).
+
+```bash
+# Promote a customer to administrator (explicit, audited, no HTTP route exists for this)
+dotnet run --project apps/api/src/DanielsDojo.Api -- \
+  identity grant-admin --user-id <internal-guid> --reason "Founding administrator" --confirm
+```
+
+Afterwards, add the same external identity to the Entra `DanielsDojo-Admins-MFA` group so
+administrator sign-in is MFA-enforced. That step is manual in Phase 3.
+
 ## Backend: install, build, test, run
 
 Run from the repository root.
@@ -213,18 +234,19 @@ issues by disabling HTTPS security globally (for example, do not set
 `NODE_TLS_REJECT_UNAUTHORIZED=0`); the proxy’s scoped `"secure": false` is the only
 certificate relaxation needed, and it applies to local development only.
 
-## Excluded from Phase 2
+## Excluded from Phase 3
 
-Phase 2 adds **persistence only**. This repository still does **not** contain, and Phase 2
-intentionally does not implement:
+Phase 3 adds **authentication and application authorization only**. This repository still does
+**not** contain, and Phase 3 intentionally does not implement:
 
-- authentication or sign-in of any kind — no Entra External ID, MSAL, bearer tokens,
-  passwords, or account signup. `identity.Users` stores external provider identifiers only.
-- Stripe SDK calls, Checkout, portal sessions, webhook HTTP endpoints, or entitlement
-  evaluation. The commerce tables exist so their invariants hold from the first row written;
-  nothing reads or writes them yet.
-- course, catalog, or admin API endpoints, and no Angular catalog, admin, or student screens.
-- Mux, Blob Storage, Azure resources, Bicep resources, or any deployment stage.
+- passwords, password hashes, ASP.NET Core Identity local credentials, or social login.
+  Credentials live entirely in Entra External ID.
+- Stripe SDK calls, Checkout, portal sessions, webhook HTTP endpoints, subscriptions, trials,
+  refunds, or entitlement evaluation. The commerce tables exist so their invariants hold from
+  the first row written; nothing reads or writes them yet.
+- course or catalog CRUD endpoints, and no Angular catalog or student learning screens. The
+  only admin surface is a smoke endpoint plus a route that proves the role gate works.
+- Mux, Blob Storage, email delivery, Azure resources, Bicep resources, or any deployment stage.
 - trials, coupons, annual plans, tiers, bundles, certificates, bookmarks, or background jobs.
 - speculative infrastructure (Redis, queues, microservices, MediatR, AutoMapper,
   FluentValidation) and generic repository or unit-of-work abstractions.

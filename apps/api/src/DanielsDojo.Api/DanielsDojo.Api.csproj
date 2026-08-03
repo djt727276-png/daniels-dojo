@@ -15,11 +15,19 @@
   <ItemGroup>
     <!-- Development-only OpenAPI document generation (.NET 10 built-in generator). -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Entra External ID bearer token validation. -->
+    <PackageReference Include="Microsoft.Identity.Web" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DanielsDojo.Application\DanielsDojo.Application.csproj" />
     <ProjectReference Include="..\DanielsDojo.Infrastructure\DanielsDojo.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The configuration validator is internal by design; its rules are security-relevant
+         enough to test directly rather than only through a booted host. -->
+    <InternalsVisibleTo Include="DanielsDojo.IntegrationTests" />
   </ItemGroup>
 
 </Project>
