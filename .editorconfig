@@ -1,0 +1,76 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{cs,csx}]
+indent_size = 4
+
+# C# code style and naming conventions
+[*.cs]
+# this. preferences
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+# Language keywords vs BCL types
+dotnet_style_predefined_type_for_locals_parameters_members = true:warning
+dotnet_style_predefined_type_for_member_access = true:warning
+
+# Modern language features
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = true:warning
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_style_prefer_primary_constructors = true:suggestion
+
+# Nullability
+dotnet_diagnostic.CS8618.severity = warning
+
+# Naming: private fields _camelCase
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_prefix
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_prefix.capitalization = camel_case
+dotnet_naming_style.underscore_prefix.required_prefix = _
+
+# Test projects only: xUnit test methods use the conventional
+# Method_Scenario_ExpectedResult naming, which CA1707 (no underscores in member
+# names) flags. The convention is deliberate and applies to test code alone —
+# product code under apps/api/src keeps CA1707 enforced as an error.
+[apps/api/tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
+
+[*.{csproj,props,targets,slnx}]
+indent_size = 2
+
+[*.{json,json5,yml,yaml}]
+indent_size = 2
+
+[*.{ts,js,mjs,cjs}]
+indent_size = 2
+
+[*.html]
+indent_size = 2
+
+[*.{css,scss}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{ps1,psm1}]
+indent_size = 4
+
+[*.sh]
+indent_size = 2

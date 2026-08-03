@@ -1,0 +1,71 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: -3rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: top 0.15s ease-in-out;
+  z-index: 10;
+}
+
+.skip-link:focus {
+  top: var(--space-2);
+}
+
+.app-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-header__inner,
+.app-main__inner {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+.app-header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-header__brand {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.app-header__nav {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.app-header__link {
+  text-decoration: none;
+  font-weight: 500;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.app-header__link:hover {
+  text-decoration: underline;
+}
+
+.app-main {
+  display: block;
+}
+
+.app-main__inner {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-8);
+}

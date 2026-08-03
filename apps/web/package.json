@@ -1,0 +1,41 @@
+{
+  "name": "daniels-dojo-web",
+  "version": "0.1.0",
+  "description": "Daniel's Dojo — Phase 1 web application foundation.",
+  "private": true,
+  "packageManager": "npm@11.12.1",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "test:ci": "ng test --no-watch",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@angular/common": "^22.1.0",
+    "@angular/compiler": "^22.1.0",
+    "@angular/core": "^22.1.0",
+    "@angular/forms": "^22.1.0",
+    "@angular/platform-browser": "^22.1.0",
+    "@angular/router": "^22.1.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.1.2",
+    "@angular/cli": "^22.1.2",
+    "@angular/compiler-cli": "^22.1.0",
+    "@eslint/js": "^10.0.0",
+    "angular-eslint": "^22.1.0",
+    "eslint": "^10.0.0",
+    "jsdom": "^28.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.0.8"
+  }
+}

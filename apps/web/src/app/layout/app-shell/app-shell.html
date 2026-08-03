@@ -1,0 +1,16 @@
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="app-header">
+  <div class="app-header__inner">
+    <span class="app-header__brand">{{ productName }}</span>
+    <nav class="app-header__nav" aria-label="Primary">
+      <a routerLink="/" class="app-header__link">Home</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main-content" class="app-main" tabindex="-1">
+  <div class="app-main__inner">
+    <router-outlet />
+  </div>
+</main>

@@ -1,0 +1,85 @@
+/* -------------------------------------------------------------------------
+   Daniel's Dojo — global style foundation.
+   A restrained design-token layer (color, spacing, radius, typography) plus a
+   light reset and accessible focus styling. No external fonts are used.
+   ------------------------------------------------------------------------- */
+
+:root {
+  /* Color */
+  --color-bg: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-border: #dfe3e8;
+  --color-text: #1c2430;
+  --color-text-muted: #5b6673;
+  --color-primary: #1f4fd8;
+  --color-primary-contrast: #ffffff;
+  --color-success: #1f8a4c;
+  --color-success-surface: #e7f6ec;
+  --color-danger: #c0392b;
+  --color-danger-surface: #fbeceb;
+  --color-focus: #1f4fd8;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Typography — system font stack, no web-font dependency */
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', roboto, helvetica, arial, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji';
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.75rem;
+  --line-height-base: 1.5;
+
+  /* Layout */
+  --content-max-width: 64rem;
+  --shadow-sm: 0 1px 2px rgba(28, 36, 48, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+/* Accessible, clearly visible keyboard focus for all interactive elements. */
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

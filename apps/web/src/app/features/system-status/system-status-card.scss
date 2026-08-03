@@ -1,0 +1,64 @@
+.status-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5);
+  max-width: 32rem;
+}
+
+.status-card__title {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-4);
+}
+
+.status-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.status-card__details {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.status-card__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-2);
+}
+
+.status-card__row dt {
+  color: var(--color-text-muted);
+}
+
+.status-card__row dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+.status-card__message {
+  color: var(--color-text-muted);
+}
+
+.status-card__retry {
+  align-self: flex-start;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.status-card__retry:hover {
+  filter: brightness(0.95);
+}

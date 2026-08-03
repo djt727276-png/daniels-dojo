@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DanielsDojo.Domain/DanielsDojo.Domain.csproj" />
+    <Project Path="src/DanielsDojo.Application/DanielsDojo.Application.csproj" />
+    <Project Path="src/DanielsDojo.Infrastructure/DanielsDojo.Infrastructure.csproj" />
+    <Project Path="src/DanielsDojo.Api/DanielsDojo.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DanielsDojo.UnitTests/DanielsDojo.UnitTests.csproj" />
+    <Project Path="tests/DanielsDojo.IntegrationTests/DanielsDojo.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

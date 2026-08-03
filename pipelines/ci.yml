@@ -1,0 +1,96 @@
+# Daniel's Dojo — Phase 1 CI (validation only).
+#
+# This pipeline validates the repository on pull requests and on changes to the
+# primary branch. It builds and tests the backend and frontend and builds the API
+# container image WITHOUT pushing it. It contains no deployment job, Azure
+# subscription, service connection, secret, environment, or production stage.
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  dotnetSdkVersion: '10.0.302'
+  nodeVersion: '24.15.0'
+  buildConfiguration: 'Release'
+  solution: 'apps/api/DanielsDojo.slnx'
+  webDir: 'apps/web'
+
+steps:
+  # ----- Toolchain -----
+  - task: UseDotNet@2
+    displayName: 'Install .NET SDK $(dotnetSdkVersion)'
+    inputs:
+      packageType: 'sdk'
+      version: '$(dotnetSdkVersion)'
+
+  - task: NodeTool@0
+    displayName: 'Install Node.js $(nodeVersion)'
+    inputs:
+      versionSpec: '$(nodeVersion)'
+
+  # ----- Backend: restore, build, test -----
+  - script: dotnet restore "$(solution)"
+    displayName: 'dotnet restore'
+
+  - script: dotnet build "$(solution)" --configuration $(buildConfiguration) --no-restore
+    displayName: 'dotnet build (Release)'
+
+  - script: >
+      dotnet test "$(solution)"
+      --configuration $(buildConfiguration)
+      --no-build
+      --logger trx
+      --results-directory "$(Agent.TempDirectory)/dotnet-test-results"
+    displayName: 'dotnet test (Release)'
+
+  - task: PublishTestResults@2
+    displayName: 'Publish .NET test results'
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '$(Agent.TempDirectory)/dotnet-test-results/**/*.trx'
+      failTaskOnFailedTests: true
+
+  # ----- Frontend: cache, install (lockfile only), format, lint, test, build -----
+  - task: Cache@2
+    displayName: 'Cache npm packages'
+    inputs:
+      key: 'npm | "$(Agent.OS)" | $(webDir)/package-lock.json'
+      restoreKeys: |
+        npm | "$(Agent.OS)"
+      path: '$(Pipeline.Workspace)/.npm'
+
+  - script: npm ci --cache "$(Pipeline.Workspace)/.npm" --prefer-offline
+    displayName: 'npm ci (committed lockfile)'
+    workingDirectory: $(webDir)
+
+  - script: npm run format:check
+    displayName: 'Prettier format check'
+    workingDirectory: $(webDir)
+
+  - script: npm run lint
+    displayName: 'ESLint'
+    workingDirectory: $(webDir)
+
+  # Vitest on jsdom (Angular 22 default runner) — no browser binary required.
+  - script: npm run test:ci
+    displayName: 'Angular unit tests (Vitest, single run)'
+    workingDirectory: $(webDir)
+
+  - script: npm run build
+    displayName: 'Angular production build'
+    workingDirectory: $(webDir)
+
+  # ----- API container image (build only, never pushed) -----
+  - script: docker build -f apps/api/Dockerfile -t daniels-dojo-api:$(Build.BuildId) .
+    displayName: 'Docker build API image (no push)'

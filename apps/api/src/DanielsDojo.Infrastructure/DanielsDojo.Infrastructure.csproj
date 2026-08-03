@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Infrastructure: future external integrations and persistence. References
+    Application and Domain. Phase 1 keeps this minimal (no EF Core, no provider
+    SDKs) and contains only an assembly marker.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\DanielsDojo.Application\DanielsDojo.Application.csproj" />
+    <ProjectReference Include="..\DanielsDojo.Domain\DanielsDojo.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Domain: future core business rules. It is the center of the architecture and
+    references no other product project. Phase 1 contains only an assembly marker.
+  -->
+
+</Project>

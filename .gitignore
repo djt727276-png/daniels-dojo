@@ -1,0 +1,58 @@
+# ---------------------------------------------------------------------------
+# .NET build output
+# ---------------------------------------------------------------------------
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+*.userprefs
+project.lock.json
+
+# .NET test results / coverage
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+*.opencover.xml
+
+# ---------------------------------------------------------------------------
+# Node / Angular
+# ---------------------------------------------------------------------------
+node_modules/
+apps/web/dist/
+apps/web/.angular/
+apps/web/coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---------------------------------------------------------------------------
+# IDE / editor state
+# ---------------------------------------------------------------------------
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Local secrets / environment (never commit)
+# ---------------------------------------------------------------------------
+*.env
+.env.*
+!.env.example
+appsettings.*.Local.json
+*.pfx
+secrets.json
+
+# ---------------------------------------------------------------------------
+# Docker / misc
+# ---------------------------------------------------------------------------
+*.pid

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Application: use cases and application contracts. References Domain only.
+    Must not depend on ASP.NET Core, databases, Azure, or UI concerns. It uses
+    only base-class-library abstractions (e.g. System.TimeProvider).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\DanielsDojo.Domain\DanielsDojo.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

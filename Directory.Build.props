@@ -1,0 +1,40 @@
+<Project>
+
+  <!--
+    Repository-wide MSBuild defaults applied to every product and test project.
+    Individual projects may override where genuinely required, but the intent is
+    a single, consistent, strict build configuration across the solution.
+  -->
+  <PropertyGroup>
+    <!-- Locked target framework for all Phase 1 projects. -->
+    <TargetFramework>net10.0</TargetFramework>
+
+    <!-- Language / safety -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Use the default stable C# language version for the SDK; no preview features. -->
+    <LangVersion>latest</LangVersion>
+
+    <!-- Reproducible builds -->
+    <Deterministic>true</Deterministic>
+
+    <!-- Analyzers at the stable recommended level -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+
+    <!-- Treat warnings as errors for repository-owned code. Fix warnings; do not
+         globally suppress them. Documentation-comment generation is intentionally
+         left disabled so it does not produce a flood of CS1591 warnings. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!-- Central package management is defined in Directory.Packages.props. -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- Deterministic builds on CI without leaking absolute local paths. -->
+  <PropertyGroup Condition="'$(ContinuousIntegrationBuild)' == ''">
+    <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,41 @@
+# Effective ignore file used by BuildKit for `docker build -f apps/api/Dockerfile .`
+# (BuildKit reads the ignore file co-located with the referenced Dockerfile).
+# Keep identical to apps/api/.dockerignore.
+
+# Source control / metadata
+**/.git
+**/.gitignore
+**/.gitattributes
+
+# .NET build output and test results
+**/bin
+**/obj
+**/artifacts
+**/TestResults
+**/*.trx
+**/*.coverage
+
+# Frontend dependencies and build output (not part of the API image)
+apps/web/node_modules
+apps/web/dist
+apps/web/.angular
+apps/web/coverage
+**/node_modules
+
+# IDE / editor state
+**/.vs
+**/.vscode
+**/.idea
+**/*.user
+
+# Local secrets / environment (never copy into image layers)
+**/*.env
+**/.env.*
+**/secrets.json
+**/*.pfx
+
+# Docs / infra / pipelines / scripts are not needed to build the image
+**/*.md
+infra/
+pipelines/
+scripts/

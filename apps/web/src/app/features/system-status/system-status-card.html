@@ -1,0 +1,37 @@
+<section class="status-card" aria-labelledby="status-card-title">
+  <h2 id="status-card-title" class="status-card__title">API status</h2>
+
+  @switch (view().kind) {
+    @case ('loading') {
+      <app-status-indicator tone="loading" label="Checking API…" />
+    }
+    @case ('healthy') {
+      <div class="status-card__body">
+        <app-status-indicator tone="healthy" label="API is healthy" />
+        @if (healthy(); as ok) {
+          <dl class="status-card__details">
+            <div class="status-card__row">
+              <dt>Service</dt>
+              <dd>{{ ok.service }}</dd>
+            </div>
+            <div class="status-card__row">
+              <dt>Environment</dt>
+              <dd>{{ ok.environment }}</dd>
+            </div>
+            <div class="status-card__row">
+              <dt>Reported (UTC)</dt>
+              <dd>{{ ok.utcTimestamp }}</dd>
+            </div>
+          </dl>
+        }
+      </div>
+    }
+    @case ('unavailable') {
+      <div class="status-card__body">
+        <app-status-indicator tone="unavailable" label="API is unavailable" />
+        <p class="status-card__message">The API could not be reached.</p>
+        <button type="button" class="status-card__retry" (click)="retry()">Retry</button>
+      </div>
+    }
+  }
+</section>
