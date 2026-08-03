@@ -13,7 +13,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy repo-wide MSBuild + SDK pinning first (rarely changes -> better layer caching).
-COPY global.json Directory.Build.props Directory.Packages.props ./
+# .editorconfig carries the analyzer severity configuration, so the container build must
+# apply exactly the same rules as a local build.
+COPY global.json Directory.Build.props Directory.Packages.props .editorconfig ./
 
 # Copy only project files next so 'restore' is cached until a project file changes.
 COPY apps/api/src/DanielsDojo.Domain/DanielsDojo.Domain.csproj apps/api/src/DanielsDojo.Domain/

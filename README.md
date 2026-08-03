@@ -53,7 +53,8 @@ These versions are locked for Phase 1:
 - **Angular CLI / Angular 22.1.x** (declared in `apps/web/package.json`). Unit
   tests use the Angular 22 default `@angular/build:unit-test` builder with the
   Vitest runner on jsdom; the application uses zoneless change detection.
-- **Docker** (optional locally) — only needed to build the API image.
+- **Docker** — **required**. It runs the local SQL Server 2025 Developer database, the
+  database integration tests (real SQL Server via Testcontainers), and the API image build.
 
 ## Repository structure
 
@@ -69,26 +70,70 @@ These versions are locked for Phase 1:
   scripts/  verify.sh / verify.ps1
 ```
 
+## Database: one-command local bootstrap
+
+Start Docker, then run **one** command. It creates the SQL Server 2025 container, generates a
+development-only password outside the repository, stores the connection string in .NET user
+secrets, applies migrations, and seeds.
+
+```powershell
+# Windows PowerShell
+./scripts/db.ps1 recreate -Profile development -Confirm
+```
+
+```bash
+# Linux / macOS
+./scripts/db.sh recreate development --confirm
+```
+
+Day-to-day commands (`start`, `migrate`, `seed`, `recreate`, `stop`, `status`) and the exact
+container, volume, database, and port are documented in
+[`infra/local/README.md`](infra/local/README.md). **No password or connection string is ever
+committed** — the generated credential lives in the git-ignored `.local/` directory.
+
+`recreate` is destructive. It only ever acts on the fixed local Daniel's Dojo container,
+volume, and database, prints that target, and refuses to run without explicit confirmation.
+
+Migrations and seeding are always explicit operator actions — the API never migrates or seeds
+during ordinary startup:
+
+```bash
+dotnet run --project apps/api/src/DanielsDojo.Api -- database migrate
+dotnet run --project apps/api/src/DanielsDojo.Api -- database seed --profile reference
+```
+
+The `development` seed profile is refused unless the host environment is exactly
+`Development`. See [`docs/architecture/phase-2-data-design.md`](docs/architecture/phase-2-data-design.md)
+for the schema, invariants, and seed contents.
+
 ## Backend: install, build, test, run
 
 Run from the repository root.
 
 ```bash
+# Restore the pinned dotnet-ef tool once per clone
+dotnet tool restore
+
 # Restore, build (Release), and test the solution
 dotnet restore apps/api/DanielsDojo.slnx
 dotnet build   apps/api/DanielsDojo.slnx -c Release --no-restore
-dotnet test    apps/api/DanielsDojo.slnx -c Release --no-build
+dotnet test    apps/api/DanielsDojo.slnx -c Release --no-build   # needs Docker
 
 # Run the API (HTTPS profile) for local development
 dotnet run --project apps/api/src/DanielsDojo.Api --launch-profile https
 ```
 
+`dotnet test` starts a disposable SQL Server 2025 container through Testcontainers. The
+database tests are never skipped silently — without Docker they fail.
+
 With the `https` profile the API listens on **https://localhost:7148** (and
 **http://localhost:5148**). Useful URLs:
 
 - System status: `https://localhost:7148/api/v1/system/status`
-- Liveness: `https://localhost:7148/health/live`
-- Readiness: `https://localhost:7148/health/ready`
+- Liveness: `https://localhost:7148/health/live` — independent of SQL, so a database outage
+  never causes an orchestrator to kill a healthy process.
+- Readiness: `https://localhost:7148/health/ready` — healthy only when the configured database
+  is reachable **and** fully migrated.
 - OpenAPI (Development only): `https://localhost:7148/openapi/v1.json`
 
 ## Frontend: install, run with the API proxy
@@ -117,10 +162,14 @@ npm run format:check  # Prettier check
 
 ## Verification scripts
 
-Both scripts run the same logical checks — tool versions, .NET restore/build/test
-(Release), `npm ci`, format check, lint, unit tests, Angular production build, and
-(when Docker is available) the API image build. They fail immediately on any error
-and are safe to rerun.
+Both scripts run the same 13 logical checks — tool versions, `dotnet tool restore`, .NET
+restore, .NET format verification, Release build, EF migrations list, the pending-model-change
+check, idempotent script generation, .NET tests (including real SQL Server), `npm ci`, format
+check, lint, frontend tests, Angular production build, and the API image build. They fail
+immediately on any error and are safe to rerun.
+
+**Docker must be running.** The scripts assert it up front and fail with a clear message
+rather than skipping the database tests.
 
 ```bash
 # Linux / macOS
@@ -164,14 +213,21 @@ issues by disabling HTTPS security globally (for example, do not set
 `NODE_TLS_REJECT_UNAUTHORIZED=0`); the proxy’s scoped `"secure": false` is the only
 certificate relaxation needed, and it applies to local development only.
 
-## Excluded from Phase 1
+## Excluded from Phase 2
 
-Phase 1 intentionally does **not** implement, and this repository does not contain:
-EF Core or any database, SQL/migrations/entities/repositories/seed data;
-authentication, users, roles, or authorization (no Entra External ID, MSAL, or
-ASP.NET auth); payments or commerce (no Stripe, prices, subscriptions, webhooks);
-video or media (no Mux, Blob Storage, course resources); course/lesson/progress/
-entitlement/enrollment/admin models; Bicep resources or Azure deployment; any
-deployment pipeline; and speculative infrastructure (Redis, queues, microservices,
-MediatR, AutoMapper, FluentValidation). No Azure deployment, authentication, SQL,
-payments, or course features exist yet.
+Phase 2 adds **persistence only**. This repository still does **not** contain, and Phase 2
+intentionally does not implement:
+
+- authentication or sign-in of any kind — no Entra External ID, MSAL, bearer tokens,
+  passwords, or account signup. `identity.Users` stores external provider identifiers only.
+- Stripe SDK calls, Checkout, portal sessions, webhook HTTP endpoints, or entitlement
+  evaluation. The commerce tables exist so their invariants hold from the first row written;
+  nothing reads or writes them yet.
+- course, catalog, or admin API endpoints, and no Angular catalog, admin, or student screens.
+- Mux, Blob Storage, Azure resources, Bicep resources, or any deployment stage.
+- trials, coupons, annual plans, tiers, bundles, certificates, bookmarks, or background jobs.
+- speculative infrastructure (Redis, queues, microservices, MediatR, AutoMapper,
+  FluentValidation) and generic repository or unit-of-work abstractions.
+
+The CI pipeline remains validation-only: it builds, tests, and produces a migration script
+artifact, and never deploys or runs migrations against a shared database.

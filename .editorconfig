@@ -44,6 +44,13 @@ dotnet_naming_symbols.private_fields.applicable_accessibilities = private
 dotnet_naming_style.underscore_prefix.capitalization = camel_case
 dotnet_naming_style.underscore_prefix.required_prefix = _
 
+# EF Core generated migrations only. These files are emitted by 'dotnet ef migrations add'
+# and are never hand-edited, so a performance suggestion about constant array arguments has
+# nothing to act on. Scoped to the generated directory; all other analyzers stay enforced
+# here, and product code everywhere else keeps CA1861 as an error.
+[apps/api/src/DanielsDojo.Infrastructure/Persistence/Migrations/**.cs]
+dotnet_diagnostic.CA1861.severity = none
+
 # Test projects only: xUnit test methods use the conventional
 # Method_Scenario_ExpectedResult naming, which CA1707 (no underscores in member
 # names) flags. The convention is deliberate and applies to test code alone —

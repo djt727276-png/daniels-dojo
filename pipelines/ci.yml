@@ -24,6 +24,7 @@ variables:
   buildConfiguration: 'Release'
   solution: 'apps/api/DanielsDojo.slnx'
   webDir: 'apps/web'
+  infraProject: 'apps/api/src/DanielsDojo.Infrastructure'
 
 steps:
   # ----- Toolchain -----
@@ -38,20 +39,53 @@ steps:
     inputs:
       versionSpec: '$(nodeVersion)'
 
-  # ----- Backend: restore, build, test -----
+  # ----- Backend: tools, restore, format, build, EF checks, test -----
+  # The repository-local dotnet-ef tool is pinned in .config/dotnet-tools.json.
+  - script: dotnet tool restore
+    displayName: 'dotnet tool restore (dotnet-ef)'
+
   - script: dotnet restore "$(solution)"
     displayName: 'dotnet restore'
+
+  - script: dotnet format "$(solution)" --verify-no-changes --no-restore
+    displayName: 'dotnet format (verify only)'
 
   - script: dotnet build "$(solution)" --configuration $(buildConfiguration) --no-restore
     displayName: 'dotnet build (Release)'
 
+  # Both EF checks work from the compiled model and never contact a database. CI must
+  # never run migrations against a shared database.
+  - script: >
+      dotnet ef migrations list
+      --project $(infraProject)
+      --startup-project $(infraProject)
+      --no-connect --no-build --configuration $(buildConfiguration)
+    displayName: 'EF migrations list'
+
+  - script: >
+      dotnet ef migrations has-pending-model-changes
+      --project $(infraProject)
+      --startup-project $(infraProject)
+      --no-build --configuration $(buildConfiguration)
+    displayName: 'EF no pending model changes'
+
+  - script: >
+      dotnet ef migrations script --idempotent
+      --project $(infraProject)
+      --startup-project $(infraProject)
+      --no-build --configuration $(buildConfiguration)
+      --output "$(Build.ArtifactStagingDirectory)/InitialPlatformSchema.idempotent.sql"
+    displayName: 'EF idempotent migration script (artifact only, never applied)'
+
+  # The ubuntu-latest hosted image provides a Docker daemon, which the database tests use
+  # to start a disposable SQL Server 2025 container. Nothing here touches a shared database.
   - script: >
       dotnet test "$(solution)"
       --configuration $(buildConfiguration)
       --no-build
       --logger trx
       --results-directory "$(Agent.TempDirectory)/dotnet-test-results"
-    displayName: 'dotnet test (Release)'
+    displayName: 'dotnet test (Release, includes Testcontainers SQL Server)'
 
   - task: PublishTestResults@2
     displayName: 'Publish .NET test results'

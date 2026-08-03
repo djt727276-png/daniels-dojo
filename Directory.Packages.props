@@ -23,6 +23,23 @@
     <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
   </ItemGroup>
 
+  <ItemGroup Label="Persistence (Phase 2)">
+    <!-- EF Core 10 SQL Server provider. Infrastructure-only; never referenced by
+         Domain or Application. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+    <!-- Design-time only: migrations and scaffolding. Consumed with PrivateAssets. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
+    <!-- Readiness probe support for the DbContext. -->
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup Label="Database test toolchain (Phase 2)">
+    <!-- Real SQL Server for schema/constraint tests. No SQLite or InMemory provider. -->
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.13.0" />
+    <!-- Between-test reset that preserves infrastructure.__EFMigrationsHistory. -->
+    <PackageVersion Include="Respawn" Version="7.0.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Test toolchain">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />

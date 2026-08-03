@@ -44,16 +44,28 @@ public sealed class SystemStatusEndpointTests(DanielsDojoApiFactory factory)
         Assert.Equal(ExpectedPropertyNames, propertyNames);
     }
 
-    [Theory]
-    [InlineData("/health/live")]
-    [InlineData("/health/ready")]
-    public async Task HealthEndpoints_ReturnSuccess(string path)
+    [Fact]
+    public async Task Liveness_IsHealthy_WithoutAnyDatabase()
     {
+        // This host has no SQL Server. Liveness must still succeed, because a database
+        // outage should never cause an orchestrator to kill a healthy process.
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync(path);
+        var response = await client.GetAsync("/health/live");
 
         Assert.True(response.IsSuccessStatusCode);
+    }
+
+    [Fact]
+    public async Task Readiness_IsUnhealthy_WhenTheDatabaseIsUnreachable()
+    {
+        // No connection string is configured for this factory, so the readiness probe must
+        // report that the instance cannot serve traffic yet.
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/health/ready");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 
     [Fact]

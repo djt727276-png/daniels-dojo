@@ -1,5 +1,6 @@
 using DanielsDojo.Api.Hosting;
 using DanielsDojo.Application.System;
+using DanielsDojo.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,10 +14,14 @@ builder.Logging.AddJsonConsole(options =>
     options.UseUtcTimestamp = true;
 });
 
-// Cross-cutting framework services.
+// Cross-cutting framework services. The database check is tagged for readiness only, so
+// liveness stays independent of SQL and a database outage never restarts the process.
 builder.Services.AddProblemDetails();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks().AddDatabaseReadinessCheck();
 builder.Services.AddOpenApi();
+
+// Persistence. Registration opens no connection and never migrates or seeds.
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // System-status vertical slice: injectable time + host-environment abstraction.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -24,6 +29,13 @@ builder.Services.AddSingleton<IApplicationEnvironment, HostApplicationEnvironmen
 builder.Services.AddScoped<ISystemStatusService, SystemStatusService>();
 
 var app = builder.Build();
+
+// Explicit operator commands ("database migrate", "database seed --profile ...") run here
+// and exit. Serving traffic never migrates or seeds as a side effect of startup.
+if (DatabaseCommand.Matches(args))
+{
+    return await DatabaseCommand.ExecuteAsync(app, args);
+}
 
 // Centralized exception handling produces RFC 7807 ProblemDetails responses and
 // never exposes stack traces to clients in any environment.
@@ -51,14 +63,16 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
     Predicate = static _ => false,
 });
 
-// Readiness: Phase 1 registers no dependency checks, so readiness is healthy.
-// Future dependency checks will be added here when dependencies exist.
+// Readiness: gated on the tagged dependency checks. The database check makes this
+// unhealthy whenever SQL is unreachable or migrations are still pending.
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
-    Predicate = static _ => true,
+    Predicate = static registration => registration.Tags.Contains(DependencyInjection.ReadinessTag),
 });
 
-app.Run();
+await app.RunAsync();
+
+return 0;
 
 // Exposes the implicit Program class to the integration-test host (WebApplicationFactory)
 // in the conventional supported manner, without widening production visibility further.

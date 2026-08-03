@@ -52,6 +52,10 @@ appsettings.*.Local.json
 *.pfx
 secrets.json
 
+# Local developer state written by scripts/db.ps1 and scripts/db.sh. Holds the generated
+# local SQL Server password. Never commit anything under here.
+.local/
+
 # ---------------------------------------------------------------------------
 # Docker / misc
 # ---------------------------------------------------------------------------

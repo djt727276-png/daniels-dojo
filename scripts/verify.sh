@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 #
-# Daniel's Dojo — Phase 1 local verification (Linux/macOS).
+# Daniel's Dojo — local verification (Linux/macOS).
 # Runs the same logical checks as scripts/verify.ps1. Fails immediately on any
 # command failure. Safe to rerun; only ignored build/test output is produced.
+#
+# Docker is REQUIRED: the database tests run real SQL Server 2025 through
+# Testcontainers. They are never silently skipped — if Docker is unavailable this
+# script fails and says so.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,8 +16,10 @@ cd "$ROOT_DIR"
 BUILD_CONFIG="Release"
 SOLUTION="apps/api/DanielsDojo.slnx"
 WEB_DIR="apps/web"
+INFRA_PROJECT="apps/api/src/DanielsDojo.Infrastructure"
+SCRIPT_OUTPUT="artifacts/database/InitialPlatformSchema.idempotent.sql"
 
-echo "==> [1/10] Confirm required tool versions"
+echo "==> [1/13] Confirm required tool versions"
 node --version
 npm --version
 dotnet --version
@@ -28,36 +34,59 @@ if [ "$DOTNET_MAJOR" != "10" ]; then
   exit 1
 fi
 
-echo "==> [2/10] Restore .NET dependencies"
+# The database tests are not optional. Fail here rather than appearing to pass later.
+if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+  echo "ERROR: Docker is required: the database tests run real SQL Server 2025 via Testcontainers. Start Docker and rerun." >&2
+  exit 1
+fi
+
+echo "==> [2/13] Restore repository-local .NET tools (dotnet-ef)"
+dotnet tool restore
+dotnet ef --version
+
+echo "==> [3/13] Restore .NET dependencies"
 dotnet restore "$SOLUTION"
 
-echo "==> [3/10] Build .NET solution (Release, no restore)"
+echo "==> [4/13] Verify .NET formatting"
+dotnet format "$SOLUTION" --verify-no-changes --no-restore
+
+echo "==> [5/13] Build .NET solution (Release, no restore)"
 dotnet build "$SOLUTION" --configuration "$BUILD_CONFIG" --no-restore
 
-echo "==> [4/10] Run .NET tests (Release, no build)"
+# EF checks run without a database: 'migrations list --no-connect' and the model-change
+# check both work purely from the compiled model.
+echo "==> [6/13] List EF Core migrations"
+dotnet ef migrations list --project "$INFRA_PROJECT" --startup-project "$INFRA_PROJECT" \
+  --no-connect --no-build --configuration "$BUILD_CONFIG"
+
+echo "==> [7/13] Confirm no pending model changes"
+dotnet ef migrations has-pending-model-changes --project "$INFRA_PROJECT" \
+  --startup-project "$INFRA_PROJECT" --no-build --configuration "$BUILD_CONFIG"
+
+echo "==> [8/13] Generate the idempotent migration script (verification artifact)"
+mkdir -p "$(dirname "$SCRIPT_OUTPUT")"
+dotnet ef migrations script --idempotent --project "$INFRA_PROJECT" \
+  --startup-project "$INFRA_PROJECT" --no-build --configuration "$BUILD_CONFIG" \
+  --output "$SCRIPT_OUTPUT"
+echo "    wrote $SCRIPT_OUTPUT (git-ignored)"
+
+echo "==> [9/13] Run .NET tests (Release, no build) — includes real SQL Server"
 dotnet test "$SOLUTION" --configuration "$BUILD_CONFIG" --no-build
 
-echo "==> [5/10] Install frontend dependencies (npm ci)"
+echo "==> [10/13] Install frontend dependencies (npm ci)"
 ( cd "$WEB_DIR" && npm ci )
 
-echo "==> [6/10] Frontend formatting check"
+echo "==> [11/13] Frontend formatting check and lint"
 ( cd "$WEB_DIR" && npm run format:check )
-
-echo "==> [7/10] Frontend lint"
 ( cd "$WEB_DIR" && npm run lint )
 
-echo "==> [8/10] Frontend unit tests (single run, no watch)"
+echo "==> [12/13] Frontend unit tests and production build"
 ( cd "$WEB_DIR" && npm run test:ci )
-
-echo "==> [9/10] Angular production build"
 ( cd "$WEB_DIR" && npm run build )
 
-echo "==> [10/10] Build API Docker image (if Docker is available)"
-if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-  docker build -f apps/api/Dockerfile -t daniels-dojo-api:verify .
-else
-  echo "SKIPPED: Docker is not installed or not running — image build not attempted."
-fi
+# Docker availability was already asserted before the test step, so this always runs.
+echo "==> [13/13] Build API Docker image"
+docker build -f apps/api/Dockerfile -t daniels-dojo-api:verify .
 
 echo ""
 echo "Verification completed successfully."

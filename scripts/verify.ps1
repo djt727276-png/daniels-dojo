@@ -1,16 +1,32 @@
 #!/usr/bin/env pwsh
 #
-# Daniel's Dojo — Phase 1 local verification (Windows/PowerShell).
+# Daniel's Dojo -- local verification (Windows/PowerShell).
 # Runs the same logical checks as scripts/verify.sh. Fails immediately on any
 # command failure. Safe to rerun; only ignored build/test output is produced.
+#
+# Docker is REQUIRED: the database tests run real SQL Server 2025 through
+# Testcontainers. They are never silently skipped -- if Docker is unavailable this
+# script fails and says so.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # Fail the script if an external command returns a non-zero exit code.
+#
+# Exit code is the only success signal. Windows PowerShell wraps anything a native command
+# writes to stderr in a NativeCommandError whenever the caller redirects the pipeline, and
+# $ErrorActionPreference = 'Stop' would turn that into a failure even for a tool that merely
+# logged a warning and returned 0. Scoping the preference keeps the check honest.
 function Invoke-Checked {
     param([Parameter(Mandatory)][scriptblock] $Command)
-    & $Command
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Command
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Command failed with exit code ${LASTEXITCODE}: $Command"
     }
@@ -22,8 +38,25 @@ Set-Location $RootDir
 $BuildConfig = 'Release'
 $Solution = 'apps/api/DanielsDojo.slnx'
 $WebDir = 'apps/web'
+$InfraProject = 'apps/api/src/DanielsDojo.Infrastructure'
+$ScriptOutput = 'artifacts/database/InitialPlatformSchema.idempotent.sql'
 
-Write-Host '==> [1/10] Confirm required tool versions'
+# Probe the Docker daemon by exit code only. Redirecting a native command's stderr in
+# Windows PowerShell wraps each line in a NativeCommandError, which $ErrorActionPreference
+# would turn into a terminating error -- Docker writes routine warnings to stderr even when
+# it is perfectly healthy.
+function Test-DockerAvailable {
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { return $false }
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & docker info 2>&1 | Out-Null
+        return $LASTEXITCODE -eq 0
+    }
+    finally { $ErrorActionPreference = $previous }
+}
+
+Write-Host '==> [1/13] Confirm required tool versions'
 Invoke-Checked { node --version }
 Invoke-Checked { npm --version }
 Invoke-Checked { dotnet --version }
@@ -39,59 +72,64 @@ if ($dotnetMajor -ne '10') {
     throw ".NET SDK 10.x is required (see global.json); found $(dotnet --version)."
 }
 
-Write-Host '==> [2/10] Restore .NET dependencies'
+# The database tests are not optional. Fail here rather than appearing to pass later.
+if (-not (Test-DockerAvailable)) {
+    throw 'Docker is required: the database tests run real SQL Server 2025 via Testcontainers. Start Docker Desktop and rerun.'
+}
+
+Write-Host '==> [2/13] Restore repository-local .NET tools (dotnet-ef)'
+Invoke-Checked { dotnet tool restore }
+Invoke-Checked { dotnet ef --version }
+
+Write-Host '==> [3/13] Restore .NET dependencies'
 Invoke-Checked { dotnet restore $Solution }
 
-Write-Host '==> [3/10] Build .NET solution (Release, no restore)'
+Write-Host '==> [4/13] Verify .NET formatting'
+Invoke-Checked { dotnet format $Solution --verify-no-changes --no-restore }
+
+Write-Host '==> [5/13] Build .NET solution (Release, no restore)'
 Invoke-Checked { dotnet build $Solution --configuration $BuildConfig --no-restore }
 
-Write-Host '==> [4/10] Run .NET tests (Release, no build)'
+# EF checks run without a database: 'migrations list --no-connect' and the model-change
+# check both work purely from the compiled model.
+Write-Host '==> [6/13] List EF Core migrations'
+Invoke-Checked { dotnet ef migrations list --project $InfraProject --startup-project $InfraProject --no-connect --no-build --configuration $BuildConfig }
+
+Write-Host '==> [7/13] Confirm no pending model changes'
+Invoke-Checked { dotnet ef migrations has-pending-model-changes --project $InfraProject --startup-project $InfraProject --no-build --configuration $BuildConfig }
+
+Write-Host '==> [8/13] Generate the idempotent migration script (verification artifact)'
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $ScriptOutput) | Out-Null
+Invoke-Checked { dotnet ef migrations script --idempotent --project $InfraProject --startup-project $InfraProject --no-build --configuration $BuildConfig --output $ScriptOutput }
+Write-Host "    wrote $ScriptOutput (git-ignored)"
+
+Write-Host '==> [9/13] Run .NET tests (Release, no build) -- includes real SQL Server'
 Invoke-Checked { dotnet test $Solution --configuration $BuildConfig --no-build }
 
-Write-Host '==> [5/10] Install frontend dependencies (npm ci)'
+Write-Host '==> [10/13] Install frontend dependencies (npm ci)'
 Push-Location $WebDir
 try {
     Invoke-Checked { npm ci }
 
-    Write-Host '==> [6/10] Frontend formatting check'
+    Write-Host '==> [11/13] Frontend formatting check'
     Invoke-Checked { npm run format:check }
 
-    Write-Host '==> [7/10] Frontend lint'
+    Write-Host '     Frontend lint'
     Invoke-Checked { npm run lint }
 
-    Write-Host '==> [8/10] Frontend unit tests (single run, no watch)'
+    Write-Host '==> [12/13] Frontend unit tests (single run, no watch)'
     Invoke-Checked { npm run test:ci }
 
-    Write-Host '==> [9/10] Angular production build'
+    Write-Host '     Angular production build'
     Invoke-Checked { npm run build }
 }
 finally {
     Pop-Location
 }
 
-Write-Host '==> [10/10] Build API Docker image (if Docker is available)'
-$dockerAvailable = $false
-if (Get-Command docker -ErrorAction SilentlyContinue) {
-    # Probe the daemon by exit code only. Redirecting a native command's stderr in
-    # Windows PowerShell wraps each stderr line in a NativeCommandError, which
-    # $ErrorActionPreference = 'Stop' would turn into a terminating error — Docker
-    # writes routine warnings to stderr even when it is healthy.
-    $previousPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        & docker info 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) { $dockerAvailable = $true }
-    }
-    finally {
-        $ErrorActionPreference = $previousPreference
-    }
-}
-if ($dockerAvailable) {
-    Invoke-Checked { docker build -f apps/api/Dockerfile -t daniels-dojo-api:verify . }
-}
-else {
-    Write-Host 'SKIPPED: Docker is not installed or not running — image build not attempted.'
-}
+# Docker availability was already asserted before the test step, so this always runs.
+Write-Host '==> [13/13] Build API Docker image'
+Invoke-Checked { docker build -f apps/api/Dockerfile -t daniels-dojo-api:verify . }
 
 Write-Host ''
 Write-Host 'Verification completed successfully.'

@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DanielsDojo.Application\DanielsDojo.Application.csproj" />
+    <!-- Seed environment guards and domain invariants are unit-testable without a database. -->
+    <ProjectReference Include="..\..\src\DanielsDojo.Infrastructure\DanielsDojo.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

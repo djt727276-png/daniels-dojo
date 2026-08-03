@@ -1,8 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <!-- Deterministic container-friendly output; no user secrets wired in Phase 1. -->
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!--
+      Globalization must stay enabled: Microsoft.Data.SqlClient throws
+      "Globalization Invariant Mode is not supported" at startup, so the Phase 1
+      InvariantGlobalization setting is incompatible with SQL Server persistence. The
+      runtime base image (mcr.microsoft.com/dotnet/aspnet:10.0, Debian) ships ICU, so the
+      container build is unaffected.
+    -->
+    <InvariantGlobalization>false</InvariantGlobalization>
     <UserSecretsId>daniels-dojo-api</UserSecretsId>
   </PropertyGroup>
 
