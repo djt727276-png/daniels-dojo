@@ -56,6 +56,11 @@ public static class DependencyInjection
             }
         });
 
+        // The one-time launch-administrator bootstrap. The email is protected configuration
+        // (user secrets locally, environment/Key Vault hosted), never source.
+        services.Configure<AdminBootstrapOptions>(
+            configuration.GetSection(AdminBootstrapOptions.SectionName));
+
         services.AddScoped<DatabaseSeeder>();
         services.AddScoped<IUserProvisioningService, UserProvisioningService>();
         services.AddScoped<AdminRoleGrantService>();

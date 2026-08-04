@@ -10,6 +10,7 @@ class AuthServiceStub {
   readonly configured = signal(true);
 
   signInCalls = 0;
+  createAccountCalls = 0;
   signOutCalls = 0;
   refreshCalls = 0;
 
@@ -25,6 +26,10 @@ class AuthServiceStub {
 
   signIn(): void {
     this.signInCalls += 1;
+  }
+
+  createAccount(): void {
+    this.createAccountCalls += 1;
   }
 
   signOut(): void {
@@ -67,16 +72,21 @@ describe('Account', () => {
     expect(text(fixture)).toContain('Checking your session');
   });
 
-  it('offers sign-in when signed out and calls the service', () => {
+  it('offers separate create-account and sign-in actions when signed out', () => {
     const { auth, fixture } = setup();
     auth.state.set({ kind: 'signedOut' });
     fixture.detectChanges();
 
     const element: HTMLElement = fixture.nativeElement;
-    const button = element.querySelector('button');
-    expect(button?.textContent).toContain('Sign up or sign in');
+    const buttons = Array.from(element.querySelectorAll('button'));
+    expect(buttons[0]?.textContent).toContain('Create account');
+    expect(buttons[1]?.textContent).toContain('Sign in');
 
-    button?.click();
+    buttons[0]?.click();
+    expect(auth.createAccountCalls).toBe(1);
+    expect(auth.signInCalls).toBe(0);
+
+    buttons[1]?.click();
     expect(auth.signInCalls).toBe(1);
   });
 

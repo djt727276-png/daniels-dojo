@@ -7,6 +7,12 @@ targetScope = 'resourceGroup'
 @description('Azure region.')
 param location string = resourceGroup().location
 
+@description('Region for the SQL logical server, when the group region has no SQL capacity.')
+param sqlLocation string = location
+
+@description('SQL logical server name override, for a regional retry after a reserved name.')
+param sqlServerName string = ''
+
 @description('SQL administrator password. Supplied at deployment time, stored only in Key Vault.')
 @secure()
 param sqlAdminPassword string
@@ -28,6 +34,8 @@ module platform '../../modules/platform.bicep' = {
   params: {
     location: location
     environmentName: 'dev'
+    sqlLocation: sqlLocation
+    sqlServerName: sqlServerName
     sqlAdminPassword: sqlAdminPassword
     sqlEntraAdminLogin: sqlEntraAdminLogin
     sqlEntraAdminObjectId: sqlEntraAdminObjectId
@@ -35,9 +43,11 @@ module platform '../../modules/platform.bicep' = {
     // The local dev server plus the deployed dev frontend. Exact origins, never wildcards.
     corsOrigins: [
       'http://localhost:4200'
+      'https://yellow-wave-0ef59fd0f.7.azurestaticapps.net'
     ]
 
     apiImage: apiImage
+    mediaStorageAccountName: 'danielsdojomediadev'
     deployApiApp: apiImage != ''
 
     monthlyBudgetUsd: 10

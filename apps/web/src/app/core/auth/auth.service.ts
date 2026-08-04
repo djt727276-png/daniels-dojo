@@ -68,6 +68,23 @@ export class AuthService {
     this.msal.loginRedirect(request);
   }
 
+  /**
+   * Starts the same hosted flow opened directly on its registration page.
+   *
+   * `prompt=create` is the External ID signal for "this person is new" — the customer lands
+   * on account creation with email verification instead of a sign-in form that would tell a
+   * newcomer their account does not exist.
+   */
+  createAccount(): void {
+    if (!isEntraConfigured(this.config)) {
+      this.state.set({ kind: 'error' });
+      return;
+    }
+
+    const request: RedirectRequest = { scopes: [this.config.apiScope], prompt: 'create' };
+    this.msal.loginRedirect(request);
+  }
+
   /** Signs in as one of the two seeded Development profiles. */
   signInAsDevelopmentProfile(profile: DevelopmentProfileKey): void {
     if (!this.isDevelopmentMode) {

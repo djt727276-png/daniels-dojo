@@ -9,6 +9,12 @@
 @description('Azure region.')
 param location string = resourceGroup().location
 
+@description('Region for the SQL logical server. Overridable because SQL capacity is the one service that regularly refuses new servers in a given region, and the rest of the platform need not move with it.')
+param sqlLocation string = location
+
+@description('SQL logical server name override. A failed regional attempt reserves the default name inside the SQL fabric for a while, so a retry in another region needs a fresh one.')
+param sqlServerName string = ''
+
 @description('Short environment name used in resource names, e.g. dev or prod.')
 @allowed(['dev', 'prod'])
 param environmentName string
@@ -35,6 +41,12 @@ param apiImage string
 @description('Whether the API container app should be created. False on the first pass, before an image exists.')
 param deployApiApp bool = true
 
+@description('Whether Stripe credentials exist in the vault. When false the API runs with commerce disabled (fail-closed) and the two Stripe secret references are omitted, because a Container App refuses to start while referencing a vault secret that has no value.')
+param stripeConfigured bool = false
+
+@description('Media storage account name for this environment. Public configuration, not a secret; the API reaches it with its managed identity.')
+param mediaStorageAccountName string
+
 @description('Monthly budget in USD that triggers alert emails.')
 param monthlyBudgetUsd int = 10
 
@@ -42,6 +54,7 @@ param monthlyBudgetUsd int = 10
 param budgetAlertEmail string
 
 var prefix = 'daniels-dojo-${environmentName}'
+var effectiveSqlServerName = empty(sqlServerName) ? '${prefix}-sql' : sqlServerName
 var registryName = replace('danielsdojo${environmentName}acr', '-', '')
 var vaultName = 'dd-${environmentName}-kv-${uniqueString(resourceGroup().id)}'
 
@@ -69,8 +82,8 @@ resource insights 'Microsoft.Insights/components@2020-02-02' = {
 // ------------------------------------------------------------------ sql
 
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
-  name: '${prefix}-sql'
-  location: location
+  name: effectiveSqlServerName
+  location: sqlLocation
   properties: {
     administratorLogin: sqlAdminLogin
     administratorLoginPassword: sqlAdminPassword
@@ -92,7 +105,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
 resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: sqlServer
   name: 'danielsdojo'
-  location: location
+  location: sqlLocation
   sku: {
     name: 'GP_S_Gen5'
     tier: 'GeneralPurpose'
@@ -200,16 +213,19 @@ resource apiVaultRead 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 // Secret names the API expects. Values are set by the operator or pipeline, never here;
 // listing the names in the template is what lets a deployment verify completeness without
 // ever seeing a value.
-var requiredSecretNames = [
+var coreSecretNames = [
   'sql-connection-string'
   'media-video-token-id'
   'media-video-token-secret'
   'media-video-webhook-secret'
   'media-video-signing-key-id'
   'media-video-signing-key-base64'
+]
+var stripeSecretNames = [
   'commerce-stripe-secret-key'
   'commerce-stripe-webhook-secret'
 ]
+var requiredSecretNames = concat(coreSecretNames, stripeConfigured ? stripeSecretNames : [])
 
 resource apiApp 'Microsoft.App/containerApps@2024-03-01' = if (deployApiApp) {
   name: '${prefix}-api'
@@ -256,26 +272,28 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = if (deployApiApp) {
             cpu: json('0.25')
             memory: '0.5Gi'
           }
-          env: [
+          env: concat([
             { name: 'ASPNETCORE_ENVIRONMENT', value: environmentName == 'prod' ? 'Production' : 'Staging' }
             { name: 'ASPNETCORE_URLS', value: 'http://+:8080' }
             { name: 'ConnectionStrings__DanielsDojoDatabase', secretRef: 'sql-connection-string' }
             { name: 'Media__Storage__Mode', value: 'Real' }
+            { name: 'Media__Storage__AccountName', value: mediaStorageAccountName }
             { name: 'Media__Video__Mode', value: 'Real' }
-            { name: 'Commerce__Stripe__Mode', value: 'Real' }
+            { name: 'Commerce__Stripe__Mode', value: stripeConfigured ? 'Real' : 'Disabled' }
             { name: 'Media__Video__TokenId', secretRef: 'media-video-token-id' }
             { name: 'Media__Video__TokenSecret', secretRef: 'media-video-token-secret' }
             { name: 'Media__Video__WebhookSecret', secretRef: 'media-video-webhook-secret' }
             { name: 'Media__Video__SigningKeyId', secretRef: 'media-video-signing-key-id' }
             { name: 'Media__Video__SigningKeyBase64', secretRef: 'media-video-signing-key-base64' }
-            { name: 'Commerce__Stripe__SecretKey', secretRef: 'commerce-stripe-secret-key' }
-            { name: 'Commerce__Stripe__WebhookSecret', secretRef: 'commerce-stripe-webhook-secret' }
             {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: insights.properties.ConnectionString
             }
             { name: 'AZURE_CLIENT_ID', value: apiIdentity.properties.clientId }
-          ]
+          ], stripeConfigured ? [
+            { name: 'Commerce__Stripe__SecretKey', secretRef: 'commerce-stripe-secret-key' }
+            { name: 'Commerce__Stripe__WebhookSecret', secretRef: 'commerce-stripe-webhook-secret' }
+          ] : [])
           probes: [
             {
               type: 'Liveness'

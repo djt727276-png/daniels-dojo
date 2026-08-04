@@ -11,6 +11,12 @@ targetScope = 'resourceGroup'
 @description('Azure region.')
 param location string = resourceGroup().location
 
+@description('Region for the SQL logical server, when the group region has no SQL capacity.')
+param sqlLocation string = location
+
+@description('SQL logical server name override, for a regional retry after a reserved name.')
+param sqlServerName string = ''
+
 @description('SQL administrator password. Supplied at deployment time, stored only in Key Vault.')
 @secure()
 param sqlAdminPassword string
@@ -27,6 +33,9 @@ param apiImage string = ''
 @description('Email address that receives budget alerts.')
 param budgetAlertEmail string
 
+@description('Production media storage account name, from the prod media.bicep deployment.')
+param mediaStorageAccountName string = ''
+
 @description('Exact production browser origins. Extended with the custom domain at cutover.')
 param corsOrigins array = []
 
@@ -35,11 +44,14 @@ module platform '../../modules/platform.bicep' = {
   params: {
     location: location
     environmentName: 'prod'
+    sqlLocation: sqlLocation
+    sqlServerName: sqlServerName
     sqlAdminPassword: sqlAdminPassword
     sqlEntraAdminLogin: sqlEntraAdminLogin
     sqlEntraAdminObjectId: sqlEntraAdminObjectId
     corsOrigins: corsOrigins
     apiImage: apiImage
+    mediaStorageAccountName: mediaStorageAccountName
     deployApiApp: apiImage != ''
     monthlyBudgetUsd: 25
     budgetAlertEmail: budgetAlertEmail

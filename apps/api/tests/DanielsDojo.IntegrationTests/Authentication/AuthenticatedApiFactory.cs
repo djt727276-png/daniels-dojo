@@ -41,6 +41,7 @@ public sealed class AuthenticatedApiFactory : WebApplicationFactory<Program>
         "Media__Storage__Mode",
         "Media__Video__Mode",
         "Commerce__Stripe__Mode",
+        "Authentication__BootstrapAdminEmail",
     ];
 
     private readonly Dictionary<string, string?> _previousValues = [];
@@ -71,6 +72,10 @@ public sealed class AuthenticatedApiFactory : WebApplicationFactory<Program>
         Set("Media__Storage__Mode", "Deterministic");
         Set("Media__Video__Mode", "Deterministic");
         Set("Commerce__Stripe__Mode", "Deterministic");
+
+        // The one-time launch-administrator bootstrap, exercised by AdminBootstrapTests. The
+        // address matches no ordinary test actor, so every other suite is unaffected.
+        Set("Authentication__BootstrapAdminEmail", "bootstrap.admin@example.test");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

@@ -66,6 +66,10 @@ export class Account {
     this.loadProfile();
   }
 
+  protected createAccount(): void {
+    this.auth.createAccount();
+  }
+
   protected signIn(): void {
     this.auth.signIn();
   }
