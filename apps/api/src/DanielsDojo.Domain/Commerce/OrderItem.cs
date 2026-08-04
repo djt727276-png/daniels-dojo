@@ -21,8 +21,11 @@ public sealed class OrderItem
     /// <summary>Price row charged.</summary>
     public Guid PriceId { get; set; }
 
-    /// <summary>Course granted by this line.</summary>
-    public Guid CourseId { get; set; }
+    /// <summary>
+    /// Course granted by this line, when it grants one. A lifetime purchase names its course;
+    /// a membership line grants whatever the membership covers and names none.
+    /// </summary>
+    public Guid? CourseId { get; set; }
 
     /// <summary>Offer name captured at purchase time.</summary>
     public string OfferName { get; set; } = string.Empty;
