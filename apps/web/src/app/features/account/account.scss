@@ -61,3 +61,37 @@
     outline-offset: 2px;
   }
 }
+
+.account__card {
+  align-self: stretch;
+}
+
+.account__heading {
+  margin: 0 0 var(--dd-space-2);
+  font-size: var(--dd-text-lg);
+  font-weight: var(--dd-weight-medium);
+}
+
+.account__hint {
+  margin: 0 0 var(--dd-space-3);
+  color: var(--dd-on-surface-variant);
+}
+
+.account__community,
+.account__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-3);
+}
+
+.account__field {
+  width: 100%;
+}
+
+.account__saved {
+  margin: 0;
+  padding: var(--dd-space-2) var(--dd-space-3);
+  background: var(--dd-success-container);
+  color: var(--dd-success);
+  border-radius: var(--dd-radius-md);
+}

@@ -1,0 +1,223 @@
+<div class="dd-page dd-stack">
+  @switch (state().kind) {
+    @case ('loading') {
+      <app-loading-state message="Loading course…" />
+    }
+
+    @case ('missing') {
+      <app-empty-state
+        title="Course not found"
+        message="This course no longer exists, or it was never created."
+        data-testid="course-missing"
+      >
+        <a matButton="filled" routerLink="/admin/catalog">Back to the catalog</a>
+      </app-empty-state>
+    }
+
+    @case ('error') {
+      <app-error-state [message]="errorMessage()" (retry)="load()" />
+    }
+
+    @default {
+      @if (course(); as current) {
+        <app-page-header [title]="current.title" [description]="'/' + current.slug">
+          <app-status-chip
+            [label]="current.status"
+            [tone]="tone(current.status)"
+            srPrefix="Course status"
+          />
+
+          @for (target of transitions(); track target) {
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="busy()"
+              (click)="changeStatus(target)"
+              [attr.data-testid]="'course-' + target.toLowerCase()"
+            >
+              {{ label(target) }}
+            </button>
+          }
+
+          <a matButton routerLink="/admin/catalog">Back</a>
+        </app-page-header>
+
+        @if (staleWarning()) {
+          <div class="workspace__stale" role="alert" data-testid="stale-warning">
+            <p>
+              Someone else changed this course while you were editing it. Reload to see the current
+              values, then reapply your change.
+            </p>
+            <button matButton="filled" type="button" (click)="load()" data-testid="reload-course">
+              Reload
+            </button>
+          </div>
+        } @else {
+          <app-form-error-summary [errors]="errors()" />
+        }
+
+        @if (notice(); as message) {
+          <p class="workspace__notice" role="status" data-testid="workspace-notice">
+            {{ message }}
+          </p>
+        }
+
+        <!-- ------------------------------------------------------------ metadata -->
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <h2 class="workspace__heading">Course details</h2>
+
+            <form class="workspace__form dd-stack" [formGroup]="form" (ngSubmit)="saveMetadata()">
+              <mat-form-field appearance="outline">
+                <mat-label>Title</mat-label>
+                <input matInput id="field-title" formControlName="title" data-testid="edit-title" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Slug</mat-label>
+                <input matInput id="field-slug" formControlName="slug" data-testid="edit-slug" />
+                @if (current.slugLocked) {
+                  <mat-hint data-testid="slug-locked-hint">
+                    Fixed since this course was first published, because it is part of every public
+                    link to it.
+                  </mat-hint>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Summary</mat-label>
+                <textarea matInput id="field-summary" rows="2" formControlName="summary"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Description</mat-label>
+                <textarea
+                  matInput
+                  id="field-description"
+                  rows="6"
+                  formControlName="description"
+                ></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Level</mat-label>
+                <mat-select id="field-level" formControlName="level">
+                  @for (option of levels; track option.value) {
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Cover image alt text</mat-label>
+                <input matInput id="field-imageAltText" formControlName="imageAltText" />
+                <mat-hint>Describes the image for anyone who cannot see it.</mat-hint>
+              </mat-form-field>
+
+              <mat-checkbox formControlName="includedInMembership">
+                Included in membership
+              </mat-checkbox>
+
+              <div class="workspace__actions">
+                <button
+                  matButton="filled"
+                  type="submit"
+                  [disabled]="busy()"
+                  data-testid="save-course"
+                >
+                  Save details
+                </button>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- ------------------------------------------------------------ tags -->
+        <mat-card appearance="outlined">
+          <mat-card-content class="dd-stack">
+            <h2 class="workspace__heading">Tags</h2>
+
+            <form class="workspace__tags" [formGroup]="tagForm">
+              <mat-form-field appearance="outline" class="workspace__tag-field">
+                <mat-label>Assigned tags</mat-label>
+                <mat-select formControlName="tagIds" multiple data-testid="course-tags">
+                  @for (tag of tags(); track tag.id) {
+                    <mat-option [value]="tag.id">{{ tag.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <button
+                matButton="filled"
+                type="button"
+                [disabled]="busy()"
+                (click)="saveTags()"
+                data-testid="save-tags"
+              >
+                Save tags
+              </button>
+
+              <mat-form-field appearance="outline" class="workspace__tag-field">
+                <mat-label>Create a tag</mat-label>
+                <input matInput id="field-newTag" formControlName="newTag" />
+              </mat-form-field>
+
+              <button
+                matButton="outlined"
+                type="button"
+                [disabled]="busy()"
+                (click)="createTag()"
+                data-testid="create-tag"
+              >
+                Create tag
+              </button>
+            </form>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- ------------------------------------------------------------ curriculum -->
+        <section class="dd-stack" aria-labelledby="curriculum-heading">
+          <h2 id="curriculum-heading" class="workspace__heading">Curriculum</h2>
+
+          @if (sections().length === 0) {
+            <app-empty-state
+              title="No sections yet"
+              message="Add a section, then add lessons to it. A course needs one published section containing a published lesson before it can go live."
+              data-testid="no-sections"
+            />
+          } @else {
+            <div
+              cdkDropList
+              class="workspace__sections dd-stack"
+              (cdkDropListDropped)="dropSection($event)"
+            >
+              @for (section of sections(); track section.id; let index = $index) {
+                <app-admin-section-editor
+                  cdkDrag
+                  [courseId]="current.id"
+                  [section]="section"
+                  [isFirst]="index === 0"
+                  [isLast]="index === sections().length - 1"
+                  (changed)="apply($event)"
+                  (moveUp)="moveSection(index, index - 1)"
+                  (moveDown)="moveSection(index, index + 1)"
+                />
+              }
+            </div>
+          }
+
+          <form class="workspace__new-section" [formGroup]="sectionForm" (ngSubmit)="addSection()">
+            <mat-form-field appearance="outline" class="workspace__tag-field">
+              <mat-label>New section title</mat-label>
+              <input matInput formControlName="title" data-testid="new-section-title" />
+            </mat-form-field>
+
+            <button matButton="filled" type="submit" [disabled]="busy()" data-testid="add-section">
+              Add section
+            </button>
+          </form>
+        </section>
+      }
+    }
+  }
+</div>

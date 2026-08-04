@@ -1,0 +1,222 @@
+<div class="dd-page dd-stack">
+  <app-page-header
+    title="Pricing"
+    description="Offers and prices held in this database. Nothing here contacts a payment provider."
+  />
+
+  <app-form-error-summary [errors]="errors()" />
+
+  @if (notice(); as message) {
+    <p class="pricing__notice" role="status" data-testid="pricing-notice">{{ message }}</p>
+  }
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <app-loading-state message="Loading offers…" />
+    }
+
+    @case ('error') {
+      <app-error-state [message]="errorMessage()" (retry)="load()" />
+    }
+
+    @default {
+      @if (offers().length === 0) {
+        <app-empty-state
+          title="No offers yet"
+          message="Create the first offer below. It starts as a draft and is not purchasable until both it and one of its prices are active."
+          data-testid="pricing-empty"
+        />
+      } @else {
+        <section class="dd-stack" aria-labelledby="offers-heading">
+          <h2 id="offers-heading" class="pricing__heading">Offers</h2>
+
+          @for (offer of offers(); track offer.id) {
+            <mat-card appearance="outlined" [attr.data-testid]="'offer-' + offer.code">
+              <mat-card-content class="dd-stack">
+                <div class="pricing__row">
+                  <div class="pricing__identity">
+                    <h3 class="pricing__title">{{ offer.name }}</h3>
+                    <p class="pricing__meta">
+                      {{ offer.code }} ·
+                      {{ offer.kind === 'Membership' ? 'Membership' : 'Lifetime access' }}
+                      @if (offer.courseTitle) {
+                        · {{ offer.courseTitle }}
+                      }
+                    </p>
+                  </div>
+
+                  <app-status-chip
+                    [label]="offer.status"
+                    [tone]="tone(offer.status)"
+                    srPrefix="Offer status"
+                  />
+
+                  <div class="pricing__actions">
+                    @for (target of transitions(offer.status); track target) {
+                      <button
+                        matButton="outlined"
+                        type="button"
+                        [disabled]="busy()"
+                        (click)="changeOfferStatus(offer, target)"
+                        [attr.data-testid]="'offer-' + target.toLowerCase() + '-' + offer.code"
+                      >
+                        {{ target === 'Active' ? 'Activate' : 'Retire' }}
+                      </button>
+                    }
+
+                    <button
+                      matButton
+                      type="button"
+                      [disabled]="busy()"
+                      (click)="startAddingPrice(offer.id)"
+                      [attr.data-testid]="'add-price-' + offer.code"
+                    >
+                      Add price
+                    </button>
+                  </div>
+                </div>
+
+                <p class="pricing__description">{{ offer.description }}</p>
+
+                @if (offer.prices.length === 0) {
+                  <p class="pricing__empty">
+                    No prices yet. An offer cannot be activated until one of its prices is active.
+                  </p>
+                } @else {
+                  <ul class="pricing__prices">
+                    @for (price of offer.prices; track price.id) {
+                      <li class="pricing__price">
+                        <span class="pricing__amount">
+                          {{ money(price.amountMinor, price.currency) }}
+                          {{ interval(price.billingInterval) }}
+                        </span>
+
+                        <app-status-chip
+                          [label]="price.status"
+                          [tone]="tone(price.status)"
+                          srPrefix="Price status"
+                        />
+
+                        @if (!price.editable) {
+                          <span class="pricing__locked">
+                            Fixed — publish a new price to change the amount
+                          </span>
+                        }
+
+                        <span class="pricing__price-actions">
+                          @for (target of transitions(price.status); track target) {
+                            <button
+                              matButton="outlined"
+                              type="button"
+                              [disabled]="busy()"
+                              (click)="changePriceStatus(offer, price.id, price.rowVersion, target)"
+                              [attr.data-testid]="'price-' + target.toLowerCase() + '-' + price.id"
+                            >
+                              {{ target === 'Active' ? 'Activate' : 'Retire' }}
+                            </button>
+                          }
+                        </span>
+                      </li>
+                    }
+                  </ul>
+                }
+
+                @if (addingPriceTo() === offer.id) {
+                  <form
+                    class="pricing__form"
+                    [formGroup]="priceForm"
+                    (ngSubmit)="addPrice(offer)"
+                    [attr.data-testid]="'price-form-' + offer.code"
+                  >
+                    <mat-form-field appearance="outline" class="pricing__field">
+                      <mat-label>Amount in minor units</mat-label>
+                      <input
+                        matInput
+                        id="field-amountMinor"
+                        type="number"
+                        min="1"
+                        formControlName="amountMinor"
+                      />
+                      <mat-hint>999 means 9.99 in a two-decimal currency.</mat-hint>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="pricing__field">
+                      <mat-label>Currency</mat-label>
+                      <input
+                        matInput
+                        id="field-currency"
+                        formControlName="currency"
+                        maxlength="3"
+                      />
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="pricing__field">
+                      <mat-label>Billing</mat-label>
+                      <mat-select id="field-billingInterval" formControlName="billingInterval">
+                        <mat-option value="Month">Monthly</mat-option>
+                        <mat-option value="OneTime">One time</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+
+                    <button matButton="filled" type="submit" [disabled]="busy()">Add price</button>
+                  </form>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+        </section>
+      }
+    }
+  }
+
+  <!-- ------------------------------------------------------------ new offer -->
+  <section class="dd-stack" aria-labelledby="new-offer-heading">
+    <h2 id="new-offer-heading" class="pricing__heading">New offer</h2>
+
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <form class="pricing__form" [formGroup]="offerForm" (ngSubmit)="createOffer()">
+          <mat-form-field appearance="outline" class="pricing__field">
+            <mat-label>Code</mat-label>
+            <input matInput id="field-code" formControlName="code" data-testid="offer-code" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="pricing__field">
+            <mat-label>Name</mat-label>
+            <input matInput id="field-name" formControlName="name" data-testid="offer-name" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="pricing__field">
+            <mat-label>Kind</mat-label>
+            <mat-select id="field-kind" formControlName="kind" data-testid="offer-kind">
+              <mat-option value="Membership">Membership</mat-option>
+              <mat-option value="CourseLifetime">Lifetime access to one course</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          @if (offerForm.controls.kind.value === 'CourseLifetime') {
+            <mat-form-field appearance="outline" class="pricing__field">
+              <mat-label>Course ID</mat-label>
+              <input matInput id="field-courseId" formControlName="courseId" />
+              <mat-hint>Copy the identifier from the course workspace URL.</mat-hint>
+            </mat-form-field>
+          }
+
+          <mat-form-field appearance="outline" class="pricing__field pricing__field--wide">
+            <mat-label>Description</mat-label>
+            <textarea
+              matInput
+              id="field-description"
+              rows="2"
+              formControlName="description"
+            ></textarea>
+          </mat-form-field>
+
+          <button matButton="filled" type="submit" [disabled]="busy()" data-testid="create-offer">
+            Create draft offer
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </section>
+</div>

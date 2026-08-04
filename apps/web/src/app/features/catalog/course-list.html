@@ -54,6 +54,15 @@
               @for (course of current.page.items; track course.slug) {
                 <li>
                   <mat-card appearance="outlined" class="course">
+                    <!--
+                      A neutral placeholder keeps every card the same shape. Cover images arrive
+                      with media upload in a later phase; inventing one now would misrepresent
+                      what the catalog actually holds.
+                    -->
+                    <div class="course__thumb" aria-hidden="true">
+                      <span class="course__initial">{{ course.title.charAt(0) }}</span>
+                    </div>
+
                     <mat-card-content class="course__body">
                       <h2 class="course__title">
                         <a [routerLink]="['/courses', course.slug]">{{ course.title }}</a>

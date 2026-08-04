@@ -57,54 +57,62 @@
     [opened]="isWide() || drawerOpen()"
     (closedStart)="drawerOpen.set(false)"
   >
-    <nav aria-label="Primary">
-      <mat-nav-list>
+    <nav aria-label="Primary" class="app-nav">
+      <ul class="app-nav__list">
         @for (item of publicNav; track item.route) {
-          <a
-            mat-list-item
-            [routerLink]="item.route"
-            routerLinkActive="app-nav--active"
-            [routerLinkActiveOptions]="{ exact: item.route === '/' }"
-            [attr.data-testid]="item.testId"
-            (click)="onNavigate()"
-          >
-            {{ item.label }}
-          </a>
+          <li>
+            <a
+              class="app-nav__link"
+              [routerLink]="item.route"
+              routerLinkActive="app-nav--active"
+              [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+              [attr.data-testid]="item.testId"
+              (click)="onNavigate()"
+            >
+              {{ item.label }}
+            </a>
+          </li>
         }
+      </ul>
 
-        @if (session()) {
-          <mat-divider />
-          <h2 class="app-nav__heading" id="nav-member-heading">Your area</h2>
+      @if (session()) {
+        <h2 class="app-nav__heading" id="nav-member-heading">Your area</h2>
+        <ul class="app-nav__list" aria-labelledby="nav-member-heading">
           @for (item of memberNav; track item.route) {
-            <a
-              mat-list-item
-              [routerLink]="item.route"
-              routerLinkActive="app-nav--active"
-              [attr.data-testid]="item.testId"
-              (click)="onNavigate()"
-            >
-              {{ item.label }}
-            </a>
+            <li>
+              <a
+                class="app-nav__link"
+                [routerLink]="item.route"
+                routerLinkActive="app-nav--active"
+                [attr.data-testid]="item.testId"
+                (click)="onNavigate()"
+              >
+                {{ item.label }}
+              </a>
+            </li>
           }
-        }
+        </ul>
+      }
 
-        @if (isAdmin()) {
-          <mat-divider />
-          <h2 class="app-nav__heading" id="nav-admin-heading">Administration</h2>
+      @if (isAdmin()) {
+        <h2 class="app-nav__heading" id="nav-admin-heading">Administration</h2>
+        <ul class="app-nav__list" aria-labelledby="nav-admin-heading">
           @for (item of adminNav; track item.route) {
-            <a
-              mat-list-item
-              [routerLink]="item.route"
-              routerLinkActive="app-nav--active"
-              [routerLinkActiveOptions]="{ exact: item.route === '/admin' }"
-              [attr.data-testid]="item.testId"
-              (click)="onNavigate()"
-            >
-              {{ item.label }}
-            </a>
+            <li>
+              <a
+                class="app-nav__link"
+                [routerLink]="item.route"
+                routerLinkActive="app-nav--active"
+                [routerLinkActiveOptions]="{ exact: item.route === '/admin' }"
+                [attr.data-testid]="item.testId"
+                (click)="onNavigate()"
+              >
+                {{ item.label }}
+              </a>
+            </li>
           }
-        }
-      </mat-nav-list>
+        </ul>
+      }
     </nav>
   </mat-sidenav>
 

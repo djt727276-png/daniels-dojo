@@ -56,9 +56,29 @@
   background: var(--dd-surface);
 }
 
-.app-nav__heading {
-  padding: var(--dd-space-3) var(--dd-space-4) var(--dd-space-1);
+.app-nav__list {
   margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Comfortable hit target on a phone, matching the toolbar's rhythm. */
+.app-nav__link {
+  display: block;
+  padding: var(--dd-space-3) var(--dd-space-4);
+  color: var(--dd-on-surface);
+  text-decoration: none;
+  border-radius: 0;
+}
+
+.app-nav__link:hover {
+  background: var(--dd-surface-variant);
+}
+
+.app-nav__heading {
+  padding: var(--dd-space-4) var(--dd-space-4) var(--dd-space-1);
+  margin: 0;
+  border-top: 1px solid var(--dd-outline);
   font-size: var(--dd-text-xs);
   font-weight: var(--dd-weight-bold);
   letter-spacing: 0.06em;

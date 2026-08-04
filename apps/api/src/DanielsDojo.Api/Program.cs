@@ -1,6 +1,10 @@
 using DanielsDojo.Api.Authentication;
 using DanielsDojo.Api.Catalog;
+using DanielsDojo.Api.Commerce;
+using DanielsDojo.Api.Community;
+using DanielsDojo.Api.Common;
 using DanielsDojo.Api.Hosting;
+using DanielsDojo.Application.Common;
 using DanielsDojo.Application.Identity;
 using DanielsDojo.Application.System;
 using DanielsDojo.Infrastructure;
@@ -30,6 +34,14 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Entra External ID bearer validation plus local, database-backed application authorization.
 // The Development sign-in harness is registered only inside the Development environment.
 builder.Services.AddDanielsDojoAuthentication(builder.Configuration, builder.Environment);
+
+// Actor and correlation for audited writes. The actor is the local application user resolved
+// by the provisioning middleware, never a token claim.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IOperationContext, HttpOperationContext>();
+
+// Community write limits, partitioned by the immutable local application user identifier.
+builder.Services.AddDanielsDojoRateLimiting();
 
 // System-status vertical slice: injectable time + host-environment abstraction.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -76,6 +88,9 @@ app.UseAuthentication();
 app.UseMiddleware<LocalUserProvisioningMiddleware>();
 app.UseAuthorization();
 
+// After authorization, so a partition key can use the local user the middleware resolved.
+app.UseRateLimiter();
+
 // Development sign-in harness. Mapped only inside Development with the harness enabled, so
 // the route simply does not exist elsewhere and the API answers 404 rather than 403.
 if (DevelopmentAuthOptions.IsExactlyDevelopment(app.Environment)
@@ -92,6 +107,20 @@ apiV1.MapGet("/system/status",
 
 // Anonymous catalog: published projections only.
 apiV1.MapPublicCatalogEndpoints();
+
+// Catalog authoring. The group requires the database-backed Admin role.
+apiV1.MapAdminCatalogEndpoints();
+
+// Offer and price management. Database-only: nothing here calls a payment provider.
+apiV1.MapAdminPricingEndpoints();
+
+// The signed-in member's own screens. Every route resolves the caller from the local user.
+apiV1.MapMemberEndpoints();
+
+// Community: forums for members, moderation for Admins.
+apiV1.MapForumEndpoints();
+apiV1.MapSocialEndpoints();
+apiV1.MapModerationEndpoints();
 
 // Authenticated session view. Every value comes from the local user record resolved by the
 // provisioning middleware, never from the token.

@@ -1,6 +1,10 @@
 using DanielsDojo.Application.Catalog;
+using DanielsDojo.Application.Commerce;
+using DanielsDojo.Application.Community;
 using DanielsDojo.Application.Identity;
 using DanielsDojo.Infrastructure.Catalog;
+using DanielsDojo.Infrastructure.Commerce;
+using DanielsDojo.Infrastructure.Community;
 using DanielsDojo.Infrastructure.Identity;
 using DanielsDojo.Infrastructure.Persistence;
 using DanielsDojo.Infrastructure.Persistence.Seeding;
@@ -54,6 +58,13 @@ public static class DependencyInjection
         services.AddScoped<IUserProvisioningService, UserProvisioningService>();
         services.AddScoped<AdminRoleGrantService>();
         services.AddScoped<IPublicCatalogQueries, PublicCatalogQueries>();
+        services.AddScoped<IAdminCatalogService, AdminCatalogService>();
+        services.AddScoped<IAdminPricingService, AdminPricingService>();
+        services.AddScoped<ICommunityAccessEvaluator, CommunityAccessEvaluator>();
+        services.AddScoped<IMemberService, MemberService>();
+        services.AddScoped<IForumService, ForumService>();
+        services.AddScoped<IModerationService, ModerationService>();
+        services.AddScoped<ISocialService, SocialService>();
 
         return services;
     }

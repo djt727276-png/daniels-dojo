@@ -1,0 +1,62 @@
+.workspace__heading {
+  font-size: var(--dd-text-lg);
+  font-weight: var(--dd-weight-medium);
+  margin-bottom: var(--dd-space-3);
+}
+
+.workspace__form {
+  max-width: 48rem;
+}
+
+.workspace__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dd-space-3);
+}
+
+.workspace__tags,
+.workspace__new-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--dd-space-3);
+}
+
+.workspace__tag-field {
+  flex: 1 1 16rem;
+}
+
+.workspace__notice {
+  padding: var(--dd-space-3) var(--dd-space-4);
+  background: var(--dd-success-container);
+  color: var(--dd-success);
+  border-radius: var(--dd-radius-md);
+}
+
+.workspace__stale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dd-space-4);
+  padding: var(--dd-space-4);
+  background: var(--dd-warning-container);
+  border-left: 4px solid var(--dd-warning);
+  border-radius: var(--dd-radius-md);
+}
+
+.workspace__sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-4);
+}
+
+// Drag feedback. Kept here rather than globally so it applies only where dragging exists.
+::ng-deep .cdk-drag-preview {
+  box-shadow: var(--dd-elevation-3);
+  border-radius: var(--dd-radius-lg);
+}
+
+::ng-deep .cdk-drag-placeholder {
+  opacity: 0.4;
+}

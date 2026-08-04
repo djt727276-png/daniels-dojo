@@ -77,3 +77,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+.course__thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 7rem;
+  background: linear-gradient(135deg, var(--dd-surface-variant), var(--dd-info-container));
+  border-bottom: 1px solid var(--dd-outline);
+}
+
+.course__initial {
+  font-size: var(--dd-text-2xl);
+  font-weight: var(--dd-weight-bold);
+  color: var(--dd-on-surface-variant);
+}

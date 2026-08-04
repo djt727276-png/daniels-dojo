@@ -56,7 +56,7 @@ function Test-DockerAvailable {
     finally { $ErrorActionPreference = $previous }
 }
 
-Write-Host '==> [1/13] Confirm required tool versions'
+Write-Host '==> [1/15] Confirm required tool versions'
 Invoke-Checked { node --version }
 Invoke-Checked { npm --version }
 Invoke-Checked { dotnet --version }
@@ -77,49 +77,49 @@ if (-not (Test-DockerAvailable)) {
     throw 'Docker is required: the database tests run real SQL Server 2025 via Testcontainers. Start Docker Desktop and rerun.'
 }
 
-Write-Host '==> [2/13] Restore repository-local .NET tools (dotnet-ef)'
+Write-Host '==> [2/15] Restore repository-local .NET tools (dotnet-ef)'
 Invoke-Checked { dotnet tool restore }
 Invoke-Checked { dotnet ef --version }
 
-Write-Host '==> [3/13] Restore .NET dependencies'
+Write-Host '==> [3/15] Restore .NET dependencies'
 Invoke-Checked { dotnet restore $Solution }
 
-Write-Host '==> [4/13] Verify .NET formatting'
+Write-Host '==> [4/15] Verify .NET formatting'
 Invoke-Checked { dotnet format $Solution --verify-no-changes --no-restore }
 
-Write-Host '==> [5/13] Build .NET solution (Release, no restore)'
+Write-Host '==> [5/15] Build .NET solution (Release, no restore)'
 Invoke-Checked { dotnet build $Solution --configuration $BuildConfig --no-restore }
 
 # EF checks run without a database: 'migrations list --no-connect' and the model-change
 # check both work purely from the compiled model.
-Write-Host '==> [6/13] List EF Core migrations'
+Write-Host '==> [6/15] List EF Core migrations'
 Invoke-Checked { dotnet ef migrations list --project $InfraProject --startup-project $InfraProject --no-connect --no-build --configuration $BuildConfig }
 
-Write-Host '==> [7/13] Confirm no pending model changes'
+Write-Host '==> [7/15] Confirm no pending model changes'
 Invoke-Checked { dotnet ef migrations has-pending-model-changes --project $InfraProject --startup-project $InfraProject --no-build --configuration $BuildConfig }
 
-Write-Host '==> [8/13] Generate the idempotent migration script (verification artifact)'
+Write-Host '==> [8/15] Generate the idempotent migration script (verification artifact)'
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $ScriptOutput) | Out-Null
 Invoke-Checked { dotnet ef migrations script --idempotent --project $InfraProject --startup-project $InfraProject --no-build --configuration $BuildConfig --output $ScriptOutput }
 Write-Host "    wrote $ScriptOutput (git-ignored)"
 
 # Covers the Phase 3 authentication and authorization suites too. Those issue locally signed
 # JWTs, so no Entra tenant or internet access is ever required.
-Write-Host '==> [9/13] Run .NET tests (Release, no build) -- includes real SQL Server'
+Write-Host '==> [9/15] Run .NET tests (Release, no build) -- includes real SQL Server'
 Invoke-Checked { dotnet test $Solution --configuration $BuildConfig --no-build }
 
-Write-Host '==> [10/13] Install frontend dependencies (npm ci)'
+Write-Host '==> [10/15] Install frontend dependencies (npm ci)'
 Push-Location $WebDir
 try {
     Invoke-Checked { npm ci }
 
-    Write-Host '==> [11/13] Frontend formatting check'
+    Write-Host '==> [11/15] Frontend formatting check'
     Invoke-Checked { npm run format:check }
 
     Write-Host '     Frontend lint'
     Invoke-Checked { npm run lint }
 
-    Write-Host '==> [12/13] Frontend unit tests (single run, no watch)'
+    Write-Host '==> [12/15] Frontend unit tests (single run, no watch)'
     Invoke-Checked { npm run test:ci }
 
     Write-Host '     Angular production build'
@@ -131,7 +131,7 @@ finally {
 
 # Cheap static guard against the one configuration mistake that would matter most: a
 # production build that selects the Development sign-in harness.
-Write-Host '==> [13/14] Scan for Development authentication in production configuration'
+Write-Host '==> [13/15] Scan for Development authentication in production configuration'
 $productionEnvironment = Get-Content 'apps/web/src/environments/environment.production.ts' -Raw
 if ($productionEnvironment -notmatch "mode:\s*'entra'") {
     throw 'apps/web/src/environments/environment.production.ts must pin the auth mode to entra.'
@@ -145,8 +145,29 @@ if ($apiSettings -match '"Development"\s*:\s*\{[^}]*"Enabled"\s*:\s*true') {
 }
 Write-Host '    production configuration excludes the Development auth harness'
 
+# Phase 4 boundaries, asserted cheaply rather than trusted. A spoofable partition key would
+# silently turn every community rate limit into no limit at all, and a payment SDK would mean
+# the pricing screens had quietly stopped being database-only.
+Write-Host '==> [14/15] Scan for spoofable rate-limit partitions and payment SDK creep'
+$rateLimiting = Get-Content 'apps/api/src/DanielsDojo.Api/Common/RateLimiting.cs' -Raw
+foreach ($header in @('X-Forwarded-For', 'RemoteIpAddress', 'X-Real-IP')) {
+    if ($rateLimiting -match [regex]::Escape($header)) {
+        throw "RateLimiting.cs must not partition on $header; use the local application user id."
+    }
+}
+if ($rateLimiting -notmatch 'user\.UserId') {
+    throw 'RateLimiting.cs must partition authenticated limits by the local application user id.'
+}
+$packages = Get-Content 'Directory.Packages.props' -Raw
+foreach ($package in @('Stripe.net', 'Azure.Storage.Blobs', 'Mux')) {
+    if ($packages -match [regex]::Escape($package)) {
+        throw "$package belongs to a later phase and must not be referenced yet."
+    }
+}
+Write-Host '    limits are partitioned by local user id; no payment or media SDK is referenced'
+
 # Docker availability was already asserted before the test step, so this always runs.
-Write-Host '==> [14/14] Build API Docker image'
+Write-Host '==> [15/15] Build API Docker image'
 Invoke-Checked { docker build -f apps/api/Dockerfile -t daniels-dojo-api:verify . }
 
 Write-Host ''

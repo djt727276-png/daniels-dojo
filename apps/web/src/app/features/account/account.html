@@ -31,6 +31,95 @@
           <p class="account__admin" data-testid="admin-available">You have administrator access.</p>
         }
 
+        <!--
+          Community privacy. Every setting here starts closed after setup, so the member is
+          opting in rather than discovering they were already visible.
+        -->
+        @if (profileLoaded()) {
+          @if (profile(); as community) {
+            <mat-card appearance="outlined" class="account__card">
+              <mat-card-content class="account__community">
+                <h2 class="account__heading">Community privacy</h2>
+                <p class="account__hint">
+                  You take part as
+                  <strong data-testid="account-handle">{{ community.handle }}</strong
+                  >. These settings control what other members can do.
+                </p>
+
+                @if (privacyMessage(); as message) {
+                  <p class="account__saved" role="status" data-testid="privacy-saved">
+                    {{ message }}
+                  </p>
+                }
+
+                @if (privacyError(); as message) {
+                  <p class="account__notice" role="alert" data-testid="privacy-error">
+                    {{ message }}
+                  </p>
+                }
+
+                <form class="account__form" [formGroup]="privacyForm" (ngSubmit)="savePrivacy()">
+                  <mat-form-field appearance="outline" class="account__field">
+                    <mat-label>Bio</mat-label>
+                    <textarea matInput rows="3" formControlName="bio"></textarea>
+                  </mat-form-field>
+
+                  <mat-checkbox formControlName="isDiscoverable" data-testid="privacy-discoverable">
+                    Let other members find me by handle
+                  </mat-checkbox>
+
+                  <mat-form-field appearance="outline" class="account__field">
+                    <mat-label>Who can send me a friend request</mat-label>
+                    <mat-select formControlName="friendRequestPolicy" data-testid="privacy-friends">
+                      <mat-option value="NoOne">No one</mat-option>
+                      <mat-option value="Everyone">Any member who can find me</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="account__field">
+                    <mat-label>Who can message me</mat-label>
+                    <mat-select formControlName="messagePolicy" data-testid="privacy-messages">
+                      <mat-option value="NoOne">No one</mat-option>
+                      <mat-option value="FriendsOnly">Friends only</mat-option>
+                    </mat-select>
+                    <mat-hint>
+                      Unsolicited messages are not offered, so there is no "anyone" option.
+                    </mat-hint>
+                  </mat-form-field>
+
+                  <div>
+                    <button
+                      matButton="filled"
+                      type="submit"
+                      [disabled]="savingPrivacy()"
+                      data-testid="save-privacy"
+                    >
+                      Save privacy settings
+                    </button>
+                  </div>
+                </form>
+              </mat-card-content>
+            </mat-card>
+          } @else {
+            <mat-card appearance="outlined" class="account__card">
+              <mat-card-content>
+                <h2 class="account__heading">Community</h2>
+                <p class="account__hint">
+                  You have not set up a community profile yet. Setup takes a moment and asks only
+                  for a handle — no date of birth.
+                </p>
+                <a
+                  matButton="filled"
+                  routerLink="/community/setup"
+                  data-testid="account-setup-link"
+                >
+                  Set up your profile
+                </a>
+              </mat-card-content>
+            </mat-card>
+          }
+        }
+
         <button type="button" class="account__action" (click)="signOut()">Sign out</button>
       }
 

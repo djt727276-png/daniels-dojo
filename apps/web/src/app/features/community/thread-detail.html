@@ -1,0 +1,171 @@
+<div class="dd-page dd-stack">
+  @switch (state().kind) {
+    @case ('loading') {
+      <app-loading-state message="Loading the thread…" />
+    }
+
+    @case ('missing') {
+      <app-empty-state
+        title="Thread not found"
+        message="This thread is no longer available."
+        data-testid="thread-missing"
+      >
+        <a matButton="filled" routerLink="/community">Back to the community</a>
+      </app-empty-state>
+    }
+
+    @case ('error') {
+      <app-error-state [message]="errorMessage()" (retry)="load()" />
+    }
+
+    @default {
+      @if (thread(); as current) {
+        <app-page-header
+          [title]="current.title"
+          [description]="'In ' + current.categoryName + ' · started by ' + current.authorHandle"
+        >
+          @if (current.status !== 'Open') {
+            <app-status-chip [label]="current.status" tone="neutral" srPrefix="Thread status" />
+          }
+
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="busy()"
+            (click)="toggleSubscription()"
+            data-testid="toggle-subscription"
+          >
+            {{ current.subscribed ? 'Stop following' : 'Follow' }}
+          </button>
+
+          <a matButton [routerLink]="['/community/c', current.categorySlug]">Back</a>
+        </app-page-header>
+
+        <app-form-error-summary [errors]="errors()" />
+
+        <ol class="posts" data-testid="post-list">
+          @for (post of posts(); track post.id) {
+            <li class="posts__item" [attr.data-testid]="'post-' + post.id">
+              <div class="posts__header">
+                <span class="posts__author">{{ post.authorHandle }}</span>
+                @if (post.editedAtUtc) {
+                  <span class="posts__edited">edited</span>
+                }
+              </div>
+
+              @if (post.withheld) {
+                <p class="posts__withheld" [attr.data-testid]="'withheld-' + post.id">
+                  {{ post.withheldReason }}
+                </p>
+              } @else if (editingPostId() === post.id) {
+                <form class="dd-stack" [formGroup]="editForm" (ngSubmit)="saveEdit(post)">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Edit your post</mat-label>
+                    <textarea
+                      matInput
+                      rows="5"
+                      formControlName="body"
+                      [attr.data-testid]="'edit-body-' + post.id"
+                    ></textarea>
+                  </mat-form-field>
+
+                  <div class="posts__actions">
+                    <button matButton="filled" type="submit" [disabled]="busy()">Save</button>
+                    <button matButton type="button" (click)="cancelEdit()">Cancel</button>
+                  </div>
+                </form>
+              } @else {
+                <!--
+                  Text binding inside <pre>: line breaks survive and any markup in the stored
+                  body is displayed literally rather than parsed.
+                -->
+                <pre class="posts__body" [attr.data-testid]="'body-' + post.id">{{
+                  post.body
+                }}</pre>
+              }
+
+              <div class="posts__actions">
+                <button
+                  matButton
+                  type="button"
+                  [disabled]="busy() || post.withheld"
+                  (click)="toggleLike(post)"
+                  [attr.aria-pressed]="post.likedByMe"
+                  [attr.data-testid]="'like-' + post.id"
+                >
+                  {{ post.likedByMe ? 'Liked' : 'Like' }} ({{ post.likeCount }})
+                </button>
+
+                @if (post.isOwn && !post.withheld) {
+                  <button
+                    matButton
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="startEdit(post)"
+                    [attr.data-testid]="'edit-' + post.id"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    matButton
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="removeOwn(post)"
+                    [attr.data-testid]="'remove-' + post.id"
+                  >
+                    Remove
+                  </button>
+                } @else if (!post.withheld) {
+                  <button
+                    matButton
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="reportPost(post)"
+                    [attr.data-testid]="'report-' + post.id"
+                  >
+                    Report
+                  </button>
+                }
+              </div>
+            </li>
+          }
+        </ol>
+
+        @if (current.acceptsReplies) {
+          <mat-card appearance="outlined">
+            <mat-card-content>
+              <form class="dd-stack" [formGroup]="replyForm" (ngSubmit)="reply()">
+                <mat-form-field appearance="outline">
+                  <mat-label>Your reply</mat-label>
+                  <textarea
+                    matInput
+                    id="field-body"
+                    rows="4"
+                    formControlName="body"
+                    data-testid="reply-body"
+                  ></textarea>
+                  <mat-hint>Plain text. Formatting and links are not rendered.</mat-hint>
+                </mat-form-field>
+
+                <div>
+                  <button
+                    matButton="filled"
+                    type="submit"
+                    [disabled]="busy()"
+                    data-testid="post-reply"
+                  >
+                    Post reply
+                  </button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        } @else {
+          <p class="posts__closed" data-testid="replies-closed">
+            This thread is not accepting replies.
+          </p>
+        }
+      }
+    }
+  }
+</div>
