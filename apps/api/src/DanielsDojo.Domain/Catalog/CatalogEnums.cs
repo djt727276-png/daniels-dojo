@@ -42,21 +42,45 @@ public enum LessonType
     Article,
 }
 
-/// <summary>Processing state of a lesson's video asset at the video provider.</summary>
+/// <summary>
+/// Processing state of a lesson's video, from the moment an upload is authorised to the moment
+/// the asset is withdrawn.
+/// </summary>
+/// <remarks>
+/// The vocabulary follows the actual pipeline rather than a generic ready/not-ready flag,
+/// because the states fail differently and an operator needs to know which one they are looking
+/// at: bytes that never arrived, bytes that arrived but were rejected, and an asset the
+/// provider could not process are three separate problems with three separate fixes.
+/// </remarks>
 public enum LessonVideoStatus
 {
-    /// <summary>No asset has been submitted yet.</summary>
-    Pending,
+    /// <summary>An upload has been authorised; no bytes have arrived.</summary>
+    Requested,
 
-    /// <summary>The provider is processing the asset.</summary>
-    Preparing,
+    /// <summary>The client is writing blocks to storage.</summary>
+    Uploading,
+
+    /// <summary>The exact source master is stored and its properties are verified.</summary>
+    AzureStored,
+
+    /// <summary>The processing provider has been handed the stored object.</summary>
+    MuxIngesting,
+
+    /// <summary>The provider is transcoding.</summary>
+    Processing,
 
     /// <summary>Playable.</summary>
     Ready,
 
-    /// <summary>Processing failed; see the failure code.</summary>
-    Errored,
+    /// <summary>Upload, verification, or processing failed; see the failure code.</summary>
+    Failed,
 
-    /// <summary>Deliberately disabled by an administrator.</summary>
-    Disabled,
+    /// <summary>
+    /// A replacement is in flight. The previous asset stays the one being served until the new
+    /// one is verified, so a bad re-upload never takes a working lesson off the air.
+    /// </summary>
+    Replacing,
+
+    /// <summary>Deliberately withdrawn by an administrator. Records are retained.</summary>
+    Archived,
 }

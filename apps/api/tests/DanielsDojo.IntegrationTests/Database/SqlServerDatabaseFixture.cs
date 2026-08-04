@@ -71,6 +71,7 @@ public sealed class SqlServerDatabaseFixture : IAsyncLifetime
                 DatabaseSchemas.Learning,
                 DatabaseSchemas.Audit,
                 DatabaseSchemas.Community,
+                DatabaseSchemas.Media,
             ],
             DbAdapter = DbAdapter.SqlServer,
         });

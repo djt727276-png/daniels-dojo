@@ -21,6 +21,12 @@ public sealed class LessonResource
     /// </summary>
     public string? BlobObjectName { get; set; }
 
+    /// <summary>
+    /// The verified source object holding this file. Null for rows created before a source
+    /// was recorded; required once the resource is published.
+    /// </summary>
+    public Guid? MediaSourceId { get; set; }
+
     /// <summary>IANA media type.</summary>
     public string MediaType { get; set; } = string.Empty;
 
@@ -44,4 +50,7 @@ public sealed class LessonResource
 
     /// <summary>The owning lesson.</summary>
     public Lesson? Lesson { get; set; }
+
+    /// <summary>The verified source object holding this file.</summary>
+    public Media.MediaSource? MediaSource { get; set; }
 }

@@ -24,6 +24,9 @@ public static class DatabaseSchemas
     /// <summary>Profiles, forum, relationships, messaging, notifications, and reports.</summary>
     public const string Community = "community";
 
+    /// <summary>Upload sessions, verified source objects, and caption tracks.</summary>
+    public const string Media = "media";
+
     /// <summary>EF Core migration history. Never cleared by test resets.</summary>
     public const string Infrastructure = "infrastructure";
 }
