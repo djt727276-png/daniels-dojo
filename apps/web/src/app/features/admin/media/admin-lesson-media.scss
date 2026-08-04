@@ -1,0 +1,140 @@
+.media {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-5);
+  margin-top: var(--dd-space-5);
+}
+
+.media__busy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-2);
+}
+
+.media__notice,
+.media__failure {
+  padding: var(--dd-space-3) var(--dd-space-4);
+  border-radius: var(--dd-radius-md);
+}
+
+.media__notice {
+  background: var(--dd-success-container);
+  color: var(--dd-success);
+}
+
+.media__failure {
+  background: var(--dd-danger-container);
+  color: var(--dd-danger);
+}
+
+.media__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dd-space-3);
+}
+
+.media__explain {
+  max-width: var(--dd-reading-max);
+  color: var(--dd-on-surface-variant);
+}
+
+.media__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--dd-space-4);
+  margin-top: var(--dd-space-4);
+
+  dt {
+    font-size: var(--dd-text-sm);
+    color: var(--dd-on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: var(--dd-weight-medium);
+  }
+}
+
+/* Long hashes must wrap rather than push the card sideways on a narrow screen. */
+.media__hash {
+  overflow-wrap: anywhere;
+  font-family: var(--dd-font-mono);
+  font-size: var(--dd-text-sm);
+}
+
+.media__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dd-space-3);
+  margin-top: var(--dd-space-5);
+}
+
+/*
+ * The file input is a label wearing a button's clothes: the real control stays in the
+ * accessibility tree and keeps its own keyboard behaviour, so the picker opens from the
+ * keyboard exactly as it would unstyled.
+ */
+.media__upload {
+  cursor: pointer;
+}
+
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-4);
+  margin: 0 0 var(--dd-space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.checks__item {
+  display: flex;
+  gap: var(--dd-space-3);
+  align-items: flex-start;
+  color: var(--dd-on-surface-variant);
+}
+
+.checks__item--done {
+  color: var(--dd-on-surface);
+}
+
+.checks__mark {
+  flex: none;
+  width: 1.25rem;
+  font-weight: var(--dd-weight-medium);
+  text-align: center;
+  color: var(--dd-on-surface-variant);
+}
+
+.checks__item--done .checks__mark {
+  color: var(--dd-success);
+}
+
+.checks__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-1);
+  min-width: 0;
+}
+
+.checks__label {
+  font-weight: var(--dd-weight-medium);
+}
+
+.checks__detail {
+  font-size: var(--dd-text-sm);
+  color: var(--dd-on-surface-variant);
+}
+
+.checks__verdict {
+  max-width: var(--dd-reading-max);
+  margin-bottom: var(--dd-space-4);
+}
+
+.checks__verdict--safe {
+  padding: var(--dd-space-4);
+  background: var(--dd-success-container);
+  color: var(--dd-success);
+  border-radius: var(--dd-radius-md);
+}

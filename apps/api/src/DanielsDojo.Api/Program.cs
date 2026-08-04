@@ -4,10 +4,14 @@ using DanielsDojo.Api.Commerce;
 using DanielsDojo.Api.Community;
 using DanielsDojo.Api.Common;
 using DanielsDojo.Api.Hosting;
+using DanielsDojo.Api.Learning;
+using DanielsDojo.Api.Media;
 using DanielsDojo.Application.Common;
 using DanielsDojo.Application.Identity;
 using DanielsDojo.Application.System;
 using DanielsDojo.Infrastructure;
+using DanielsDojo.Infrastructure.Commerce;
+using DanielsDojo.Infrastructure.Media;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
@@ -30,6 +34,13 @@ builder.Services.AddOpenApi();
 
 // Persistence. Registration opens no connection and never migrates or seeds.
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Cloud media. The adapter is chosen by an explicit configured mode, never inferred from
+// whether a credential happens to be present.
+builder.Services.AddMedia(builder.Configuration);
+
+// Payments. Same explicit-mode discipline as media: never inferred from key presence.
+builder.Services.AddCommerce(builder.Configuration);
 
 // Entra External ID bearer validation plus local, database-backed application authorization.
 // The Development sign-in harness is registered only inside the Development environment.
@@ -99,6 +110,10 @@ if (DevelopmentAuthOptions.IsExactlyDevelopment(app.Environment)
     app.MapDevelopmentAuthEndpoints();
 }
 
+// Local stand-in for the cloud storage endpoint. Mapped only in deterministic mode, so in
+// every other mode the route does not exist rather than merely refusing.
+app.MapDeterministicMediaSink();
+
 // Versioned, unauthenticated system-status endpoint.
 var apiV1 = app.MapGroup("/api/v1");
 apiV1.MapGet("/system/status",
@@ -116,6 +131,17 @@ apiV1.MapAdminPricingEndpoints();
 
 // The signed-in member's own screens. Every route resolves the caller from the local user.
 apiV1.MapMemberEndpoints();
+
+// Media authoring, viewer playback, and the signature-authenticated provider callback.
+apiV1.MapAdminMediaEndpoints();
+apiV1.MapLearningMediaEndpoints();
+
+// The learner-facing course experience: curriculum, lessons, progress, My Learning.
+apiV1.MapLearningEndpoints();
+
+// Customer purchasing and the signature-authenticated payment callback.
+apiV1.MapCheckoutEndpoints();
+apiV1.MapMediaWebhookEndpoints();
 
 // Community: forums for members, moderation for Admins.
 apiV1.MapForumEndpoints();

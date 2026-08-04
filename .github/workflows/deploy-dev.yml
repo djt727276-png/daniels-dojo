@@ -1,0 +1,185 @@
+# Development deployment for Daniel's Dojo.
+#
+# Builds immutable artifacts once, pushes the API image, applies reviewed migrations as an
+# explicit step, deploys the API revision, deploys the Angular build, and smoke-tests the
+# result. Azure access is workload identity federation (OIDC) — no long-lived client secret
+# exists anywhere in this repository or its settings.
+#
+# Required repository configuration (see docs/runbooks/deployment.md):
+#   variables: AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_CLIENT_ID_DEV
+#   The daniels-dojo-dev-rg platform deployment must already exist (infra/environments/dev).
+
+name: Deploy development
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: daniels-dojo-dev-rg
+  APP_NAME: daniels-dojo-dev-api
+
+jobs:
+  build:
+    name: Build immutable artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.push.outputs.digest }}
+      registry: ${{ steps.registry.outputs.server }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_DEV }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve the environment registry
+        id: registry
+        run: |
+          SERVER=$(az acr list -g "$RESOURCE_GROUP" --query "[0].loginServer" -o tsv)
+          echo "server=$SERVER" >> "$GITHUB_OUTPUT"
+
+      - name: Push the API image
+        id: push
+        run: |
+          az acr login --name "${{ steps.registry.outputs.server }}"
+          IMAGE="${{ steps.registry.outputs.server }}/daniels-dojo-api:${{ github.sha }}"
+          docker build -f apps/api/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE")
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Build the Angular production bundle
+        working-directory: apps/web
+        run: |
+          npm ci
+          npx ng build --configuration production
+
+      - name: Upload the web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist/daniels-dojo-web
+          retention-days: 7
+
+  migrate:
+    name: Apply reviewed migrations
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_DEV }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Migrations run as an explicit, logged deployment step against the environment
+      # database — never as an API startup side effect. The connection string is read from
+      # the environment Key Vault for exactly this job and never echoed.
+      - name: Apply migrations
+        run: |
+          VAULT=$(az keyvault list -g "$RESOURCE_GROUP" --query "[0].name" -o tsv)
+          CONNECTION=$(az keyvault secret show --vault-name "$VAULT" \
+            --name sql-connection-string --query value -o tsv)
+          export ConnectionStrings__DanielsDojoDatabase="$CONNECTION"
+          dotnet run --project apps/api/src/DanielsDojo.Api -c Release -- database migrate
+
+  deploy:
+    name: Deploy API and web
+    needs: [build, migrate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_DEV }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Point the container app at the new image digest
+        run: |
+          az containerapp update \
+            --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${{ needs.build.outputs.image-digest }}"
+
+      - name: Download the web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web-dist
+
+      - name: Deploy the Static Web App
+        run: |
+          SWA=$(az staticwebapp list -g "$RESOURCE_GROUP" --query "[0].name" -o tsv)
+          TOKEN=$(az staticwebapp secrets list -n "$SWA" -g "$RESOURCE_GROUP" \
+            --query properties.apiKey -o tsv)
+          npx --yes @azure/static-web-apps-cli deploy ./web-dist/browser \
+            --deployment-token "$TOKEN" --env production
+
+  smoke:
+    name: Smoke the deployed environment
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_DEV }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Health, status, and authorization checks
+        run: |
+          set -e
+          FQDN=$(az containerapp show -n "$APP_NAME" -g "$RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "API: https://$FQDN"
+
+          # Readiness proves database connectivity and applied migrations.
+          curl -fsS "https://$FQDN/health/live" > /dev/null
+          curl -fsS "https://$FQDN/health/ready" > /dev/null
+          curl -fsS "https://$FQDN/api/v1/system/status" | grep -q '"status":"ok"'
+
+          # Fail-closed checks: protected surface refuses anonymous callers.
+          for path in /api/v1/auth/session /api/v1/learning/my-learning /api/v1/billing/; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$FQDN$path")
+            [ "$CODE" = "401" ] || { echo "::error::$path returned $CODE, expected 401"; exit 1; }
+          done
+
+          # Unsigned webhooks are rejected, not accepted quietly.
+          for path in /api/v1/media/webhooks/video /api/v1/billing/webhooks/stripe; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST -d '{}' "https://$FQDN$path")
+            [ "$CODE" = "401" ] || { echo "::error::$path returned $CODE, expected 401"; exit 1; }
+          done
+
+          SWA_HOST=$(az staticwebapp list -g "$RESOURCE_GROUP" \
+            --query "[0].defaultHostname" -o tsv)
+          curl -fsS "https://$SWA_HOST" > /dev/null
+          echo "Web: https://$SWA_HOST"
+
+          echo "### Development deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: https://$FQDN" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Web: https://$SWA_HOST" >> "$GITHUB_STEP_SUMMARY"

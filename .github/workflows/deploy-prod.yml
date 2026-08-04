@@ -1,0 +1,163 @@
+# Production deployment for Daniel's Dojo.
+#
+# Never builds anything. It promotes the exact image digest that already passed development,
+# behind a GitHub production-environment approval, and refuses to proceed while any required
+# Key Vault secret is missing — an unhealthy revision with absent configuration is never
+# created in the first place.
+#
+# Required repository configuration:
+#   environment: production (with required reviewers)
+#   variables: AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_CLIENT_ID_PROD
+#   The daniels-dojo-prod-rg platform deployment must already exist (infra/environments/prod).
+
+name: Deploy production
+
+on:
+  workflow_dispatch:
+    inputs:
+      imageDigest:
+        description: >
+          The full image digest to promote, exactly as reported by the development
+          deployment (registry/daniels-dojo-api@sha256:...).
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: daniels-dojo-prod-rg
+  APP_NAME: daniels-dojo-prod-api
+
+jobs:
+  verify:
+    name: Verify configuration exists
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_PROD }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Names only. Values are never read, printed, or compared here.
+      - name: Every required secret has a value in the production vault
+        run: |
+          set -e
+          VAULT=$(az keyvault list -g "$RESOURCE_GROUP" --query "[0].name" -o tsv)
+          REQUIRED="sql-connection-string media-video-token-id media-video-token-secret \
+            media-video-webhook-secret media-video-signing-key-id media-video-signing-key-base64 \
+            commerce-stripe-secret-key commerce-stripe-webhook-secret"
+          MISSING=0
+          for NAME in $REQUIRED; do
+            if ! az keyvault secret show --vault-name "$VAULT" --name "$NAME" \
+                --query name -o tsv > /dev/null 2>&1; then
+              echo "::error::Missing production secret: $NAME"
+              MISSING=1
+            fi
+          done
+          [ "$MISSING" = "0" ] || { echo "::error::Refusing to deploy with missing secrets."; exit 1; }
+          echo "All required production secrets exist."
+
+  migrate:
+    name: Apply reviewed migrations
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_PROD }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: List pending migrations for the record
+        run: |
+          VAULT=$(az keyvault list -g "$RESOURCE_GROUP" --query "[0].name" -o tsv)
+          CONNECTION=$(az keyvault secret show --vault-name "$VAULT" \
+            --name sql-connection-string --query value -o tsv)
+          export ConnectionStrings__DanielsDojoDatabase="$CONNECTION"
+          dotnet tool install --global dotnet-ef
+          dotnet ef migrations list \
+            --project apps/api/src/DanielsDojo.Infrastructure \
+            --startup-project apps/api/src/DanielsDojo.Infrastructure \
+            --context DanielsDojoDbContext | tee migration-plan.txt
+          echo "### Migration plan" >> "$GITHUB_STEP_SUMMARY"
+          tail -20 migration-plan.txt >> "$GITHUB_STEP_SUMMARY"
+
+      # Point-in-time restore covers rollback: the deployment summary records the moment
+      # before migrations ran, and docs/runbooks/deployment.md holds the restore commands.
+      - name: Record the pre-migration restore point
+        run: |
+          echo "### Pre-migration restore point (UTC)" >> "$GITHUB_STEP_SUMMARY"
+          date -u +"%Y-%m-%dT%H:%M:%SZ" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apply migrations
+        run: |
+          VAULT=$(az keyvault list -g "$RESOURCE_GROUP" --query "[0].name" -o tsv)
+          CONNECTION=$(az keyvault secret show --vault-name "$VAULT" \
+            --name sql-connection-string --query value -o tsv)
+          export ConnectionStrings__DanielsDojoDatabase="$CONNECTION"
+          dotnet run --project apps/api/src/DanielsDojo.Api -c Release -- database migrate
+
+  deploy:
+    name: Promote the verified image
+    needs: migrate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_PROD }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Update the container app to the promoted digest
+        run: |
+          az containerapp update \
+            --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${{ inputs.imageDigest }}"
+
+      - name: Verify health before declaring anything
+        run: |
+          set -e
+          FQDN=$(az containerapp show -n "$APP_NAME" -g "$RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS "https://$FQDN/health/ready" > /dev/null; then
+              echo "Ready."
+              break
+            fi
+            [ "$attempt" = "6" ] && { echo "::error::Production never became ready."; exit 1; }
+            sleep 20
+          done
+          curl -fsS "https://$FQDN/api/v1/system/status" | grep -q '"status":"ok"'
+
+          # Fail-closed spot checks.
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$FQDN/api/v1/auth/session")
+          [ "$CODE" = "401" ] || { echo "::error::auth/session returned $CODE"; exit 1; }
+
+          echo "### Production deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: https://$FQDN" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Image: ${{ inputs.imageDigest }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Rollback: az containerapp revision list, then activate the prior revision." \
+            >> "$GITHUB_STEP_SUMMARY"

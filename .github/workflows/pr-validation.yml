@@ -1,0 +1,127 @@
+# Pull-request validation for Daniel's Dojo.
+#
+# Everything a merge must survive, and nothing that needs a credential: no Azure login, no
+# provider keys, no deployment. Database tests run against a disposable SQL Server container
+# through Testcontainers, exactly as they do locally.
+
+name: PR validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: API build and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore apps/api/DanielsDojo.slnx
+
+      - name: Format verification
+        run: dotnet format apps/api/DanielsDojo.slnx --verify-no-changes --no-restore
+
+      - name: Build (Release, warnings as errors)
+        run: dotnet build apps/api/DanielsDojo.slnx -c Release --no-restore
+
+      - name: Install EF tooling
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Migration drift check
+        run: >
+          dotnet ef migrations has-pending-model-changes
+          --project apps/api/src/DanielsDojo.Infrastructure
+          --startup-project apps/api/src/DanielsDojo.Infrastructure
+          --context DanielsDojoDbContext
+
+      - name: Unit tests
+        run: >
+          dotnet test apps/api/tests/DanielsDojo.UnitTests/DanielsDojo.UnitTests.csproj
+          -c Release --no-build --nologo
+
+      - name: Integration tests (real SQL Server via Testcontainers)
+        run: >
+          dotnet test apps/api/tests/DanielsDojo.IntegrationTests/DanielsDojo.IntegrationTests.csproj
+          -c Release --no-build --nologo
+
+  frontend:
+    name: Web build and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format verification
+        run: npm run format:check
+
+      - name: Tests
+        run: npm run test:ci
+
+      - name: Production build (enforces the bundle budgets)
+        run: npx ng build --configuration production
+
+  container:
+    name: API container builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image (not pushed anywhere)
+        run: docker build -f apps/api/Dockerfile -t daniels-dojo-api:pr .
+
+  secret-scan:
+    name: No secrets in the tree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan tracked files for credential shapes
+        run: |
+          set -e
+          # Provider secret shapes that must never be committed. Test fixtures use
+          # obviously-synthetic values that do not match these.
+          PATTERNS='sk_live_[A-Za-z0-9]|whsec_[A-Za-z0-9]{20,}|BEGIN RSA PRIVATE KEY|BEGIN PRIVATE KEY|AccountKey=[A-Za-z0-9+/=]{50,}'
+          if git grep -nE "$PATTERNS" -- ':!*.md' ; then
+            echo '::error::A credential-shaped string is committed. Remove it and rotate the value.'
+            exit 1
+          fi
+          echo "No credential shapes found."
+
+      - name: Providers stay explicit — no key-presence inference
+        run: |
+          # The provider mode must never default from a key being present. This guards the
+          # convention at review time, cheaply.
+          if git grep -nE 'Mode\s*=\s*.*SecretKey\s*!=|Mode\s*=\s*.*AccountName\s*!=' -- 'apps/api/src'; then
+            echo '::error::Provider mode appears to be inferred from credential presence.'
+            exit 1
+          fi
+          echo "Provider modes are explicit."

@@ -1,10 +1,12 @@
 using DanielsDojo.Application.Catalog;
 using DanielsDojo.Application.Commerce;
 using DanielsDojo.Application.Community;
+using DanielsDojo.Application.Learning;
 using DanielsDojo.Application.Identity;
 using DanielsDojo.Infrastructure.Catalog;
 using DanielsDojo.Infrastructure.Commerce;
 using DanielsDojo.Infrastructure.Community;
+using DanielsDojo.Infrastructure.Learning;
 using DanielsDojo.Infrastructure.Identity;
 using DanielsDojo.Infrastructure.Persistence;
 using DanielsDojo.Infrastructure.Persistence.Seeding;
@@ -65,6 +67,8 @@ public static class DependencyInjection
         services.AddScoped<IForumService, ForumService>();
         services.AddScoped<IModerationService, ModerationService>();
         services.AddScoped<ISocialService, SocialService>();
+        services.AddScoped<ICourseAccessEvaluator, CourseAccessEvaluator>();
+        services.AddScoped<ILearningService, LearningService>();
 
         return services;
     }

@@ -38,6 +38,9 @@ public sealed class AuthenticatedApiFactory : WebApplicationFactory<Program>
         "Authentication__EntraExternalId__AllowedClientIds__0",
         "Authentication__EntraExternalId__EmailClaimName",
         "Authentication__EntraExternalId__AllowedCorsOrigin",
+        "Media__Storage__Mode",
+        "Media__Video__Mode",
+        "Commerce__Stripe__Mode",
     ];
 
     private readonly Dictionary<string, string?> _previousValues = [];
@@ -61,6 +64,13 @@ public sealed class AuthenticatedApiFactory : WebApplicationFactory<Program>
         Set("Authentication__EntraExternalId__AllowedClientIds__0", TestTokenIssuer.SpaClientId);
         Set("Authentication__EntraExternalId__EmailClaimName", TestTokenIssuer.EmailClaim);
         Set("Authentication__EntraExternalId__AllowedCorsOrigin", "http://localhost:4200");
+
+        // Deterministic media in every suite. The whole pipeline — authorise, upload, verify,
+        // ingest, notify, play — runs in process against real code paths, so no test needs a
+        // network, a credential, or a cloud account.
+        Set("Media__Storage__Mode", "Deterministic");
+        Set("Media__Video__Mode", "Deterministic");
+        Set("Commerce__Stripe__Mode", "Deterministic");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

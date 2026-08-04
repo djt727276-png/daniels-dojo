@@ -140,22 +140,28 @@ dotnet restore apps/api/DanielsDojo.slnx
 dotnet build   apps/api/DanielsDojo.slnx -c Release --no-restore
 dotnet test    apps/api/DanielsDojo.slnx -c Release --no-build   # needs Docker
 
-# Run the API (HTTPS profile) for local development
-dotnet run --project apps/api/src/DanielsDojo.Api --launch-profile https
+# Run the API for local development
+dotnet run --project apps/api/src/DanielsDojo.Api --launch-profile http
 ```
 
 `dotnet test` starts a disposable SQL Server 2025 container through Testcontainers. The
 database tests are never skipped silently — without Docker they fail.
 
-With the `https` profile the API listens on **https://localhost:7148** (and
-**http://localhost:5148**). Useful URLs:
+**The canonical local API address is `http://127.0.0.1:5000`.** One address, used by the
+`http` launch profile, by `apps/web/proxy.conf.json`, and by every URL below — a mismatch
+between them is the difference between a working dev loop and a frontend that silently cannot
+reach its API. Hosted environments remain HTTPS-only; plain HTTP is a local convenience and
+nothing more.
 
-- System status: `https://localhost:7148/api/v1/system/status`
-- Liveness: `https://localhost:7148/health/live` — independent of SQL, so a database outage
+- System status: `http://127.0.0.1:5000/api/v1/system/status`
+- Liveness: `http://127.0.0.1:5000/health/live` — independent of SQL, so a database outage
   never causes an orchestrator to kill a healthy process.
-- Readiness: `https://localhost:7148/health/ready` — healthy only when the configured database
+- Readiness: `http://127.0.0.1:5000/health/ready` — healthy only when the configured database
   is reachable **and** fully migrated.
-- OpenAPI (Development only): `https://localhost:7148/openapi/v1.json`
+- OpenAPI (Development only): `http://127.0.0.1:5000/openapi/v1.json`
+
+The `https` profile additionally binds `https://127.0.0.1:7000` for anything that needs TLS
+locally; it still binds 5000 so the frontend proxy keeps working either way.
 
 ## Frontend: install, run with the API proxy
 

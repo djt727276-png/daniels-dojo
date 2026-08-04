@@ -44,6 +44,12 @@ export const routes: Routes = [
     title: "My Learning — Daniel's Dojo",
   },
   {
+    path: 'learn/lessons/:lessonId',
+    loadComponent: () => import('./features/my-learning/lesson-player').then((m) => m.LessonPlayer),
+    canActivate: [authenticatedGuard],
+    title: "Lesson — Daniel's Dojo",
+  },
+  {
     // Declared before ':categorySlug' style routes so setup is never read as a category.
     path: 'community/setup',
     loadComponent: () =>
@@ -91,6 +97,13 @@ export const routes: Routes = [
       import('./features/admin/catalog/admin-course-workspace').then((m) => m.AdminCourseWorkspace),
     canActivate: [authenticatedGuard, adminGuard],
     title: "Course workspace — Daniel's Dojo",
+  },
+  {
+    path: 'admin/lessons/:lessonId/media',
+    loadComponent: () =>
+      import('./features/admin/media/admin-lesson-media').then((m) => m.AdminLessonMedia),
+    canActivate: [authenticatedGuard, adminGuard],
+    title: "Lesson video — Daniel's Dojo",
   },
   {
     path: 'admin/pricing',
