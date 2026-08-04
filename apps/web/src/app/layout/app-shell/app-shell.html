@@ -1,20 +1,116 @@
-<a class="skip-link" href="#main-content">Skip to main content</a>
+<a class="dd-skip-link" href="#main-content">Skip to main content</a>
 
-<header class="app-header">
-  <div class="app-header__inner">
-    <span class="app-header__brand">{{ productName }}</span>
-    <nav class="app-header__nav" aria-label="Primary">
-      <a routerLink="/" class="app-header__link">Home</a>
-      <a routerLink="/account" class="app-header__link" data-testid="nav-account">Account</a>
-      @if (isAdmin()) {
-        <a routerLink="/admin" class="app-header__link" data-testid="nav-admin">Admin</a>
-      }
+<app-dev-auth-banner />
+
+<!-- role="banner" keeps the site-header landmark that a bare mat-toolbar would not expose. -->
+<mat-toolbar class="app-toolbar" color="primary" role="banner">
+  @if (!isWide()) {
+    <button
+      matIconButton
+      type="button"
+      class="app-toolbar__menu"
+      [attr.aria-expanded]="drawerOpen()"
+      aria-controls="primary-navigation"
+      aria-label="Toggle navigation menu"
+      (click)="toggleDrawer()"
+      data-testid="nav-toggle"
+    >
+      <span aria-hidden="true" class="app-toolbar__menu-glyph">☰</span>
+    </button>
+  }
+
+  <a routerLink="/" class="app-toolbar__brand">{{ productName }}</a>
+
+  <span class="app-toolbar__spacer"></span>
+
+  @if (session(); as current) {
+    <button
+      matButton
+      type="button"
+      [matMenuTriggerFor]="accountMenu"
+      class="app-toolbar__account"
+      data-testid="account-menu-trigger"
+    >
+      {{ current.displayName }}
+    </button>
+
+    <mat-menu #accountMenu="matMenu">
+      <a mat-menu-item routerLink="/account" data-testid="nav-account">Account</a>
+      <a mat-menu-item routerLink="/dashboard">Dashboard</a>
+      <mat-divider />
+      <button mat-menu-item type="button" (click)="signOut()" data-testid="sign-out">
+        Sign out
+      </button>
+    </mat-menu>
+  } @else {
+    <a matButton routerLink="/account" class="app-toolbar__account" data-testid="nav-account">
+      Sign in
+    </a>
+  }
+</mat-toolbar>
+
+<mat-sidenav-container class="app-layout">
+  <mat-sidenav
+    id="primary-navigation"
+    class="app-sidenav"
+    [mode]="isWide() ? 'side' : 'over'"
+    [opened]="isWide() || drawerOpen()"
+    (closedStart)="drawerOpen.set(false)"
+  >
+    <nav aria-label="Primary">
+      <mat-nav-list>
+        @for (item of publicNav; track item.route) {
+          <a
+            mat-list-item
+            [routerLink]="item.route"
+            routerLinkActive="app-nav--active"
+            [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+            [attr.data-testid]="item.testId"
+            (click)="onNavigate()"
+          >
+            {{ item.label }}
+          </a>
+        }
+
+        @if (session()) {
+          <mat-divider />
+          <h2 class="app-nav__heading" id="nav-member-heading">Your area</h2>
+          @for (item of memberNav; track item.route) {
+            <a
+              mat-list-item
+              [routerLink]="item.route"
+              routerLinkActive="app-nav--active"
+              [attr.data-testid]="item.testId"
+              (click)="onNavigate()"
+            >
+              {{ item.label }}
+            </a>
+          }
+        }
+
+        @if (isAdmin()) {
+          <mat-divider />
+          <h2 class="app-nav__heading" id="nav-admin-heading">Administration</h2>
+          @for (item of adminNav; track item.route) {
+            <a
+              mat-list-item
+              [routerLink]="item.route"
+              routerLinkActive="app-nav--active"
+              [routerLinkActiveOptions]="{ exact: item.route === '/admin' }"
+              [attr.data-testid]="item.testId"
+              (click)="onNavigate()"
+            >
+              {{ item.label }}
+            </a>
+          }
+        }
+      </mat-nav-list>
     </nav>
-  </div>
-</header>
+  </mat-sidenav>
 
-<main id="main-content" class="app-main" tabindex="-1">
-  <div class="app-main__inner">
-    <router-outlet />
-  </div>
-</main>
+  <mat-sidenav-content>
+    <main id="main-content" class="app-main" tabindex="-1">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

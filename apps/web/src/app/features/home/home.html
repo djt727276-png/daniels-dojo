@@ -1,5 +1,46 @@
-<section class="home">
-  <h1 class="home__title">{{ title }}</h1>
-  <p class="home__lead">The platform foundation is running.</p>
+<div class="dd-page dd-stack">
+  <section class="hero" aria-labelledby="hero-heading">
+    <h1 id="hero-heading" class="hero__title">Build software the way it ships</h1>
+    <p class="hero__lead">
+      {{ title }} teaches the parts of professional engineering that tutorials skip: real
+      architecture, real data, and the discipline that keeps a system running once people depend on
+      it.
+    </p>
+    <div class="hero__actions">
+      <a matButton="filled" routerLink="/courses" data-testid="hero-browse">Browse courses</a>
+      <a matButton="outlined" routerLink="/community">Visit the community</a>
+    </div>
+  </section>
+
+  @if (loaded() && featured().length > 0) {
+    <section aria-labelledby="featured-heading" class="dd-stack">
+      <h2 id="featured-heading">Featured courses</h2>
+
+      <ul class="featured" data-testid="featured-courses">
+        @for (course of featured(); track course.slug) {
+          <li>
+            <mat-card appearance="outlined" class="featured__card">
+              <mat-card-content class="featured__body">
+                <h3 class="featured__title">
+                  <a [routerLink]="['/courses', course.slug]">{{ course.title }}</a>
+                </h3>
+                <p class="featured__summary">{{ course.summary }}</p>
+                <mat-chip-set aria-label="Course level">
+                  <mat-chip disabled>{{ formatLevel(course.level) }}</mat-chip>
+                </mat-chip-set>
+                @if (course.lifetimePrice) {
+                  <p class="featured__price">{{ formatPrice(course.lifetimePrice) }}</p>
+                }
+              </mat-card-content>
+              <mat-card-actions>
+                <a matButton [routerLink]="['/courses', course.slug]">View course</a>
+              </mat-card-actions>
+            </mat-card>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
   <app-system-status-card />
-</section>
+</div>

@@ -15,6 +15,10 @@ export const environment: { readonly production: boolean; readonly auth: AuthCon
   production: true,
 
   auth: {
+    // Entra only. The Development harness is not a production token source, and
+    // `isDevelopmentAuthAllowed` refuses it in a production bundle regardless of this value.
+    mode: 'entra',
+
     // e.g. 'https://<subdomain>.ciamlogin.com/<tenant-id>/v2.0'
     authority: '',
 

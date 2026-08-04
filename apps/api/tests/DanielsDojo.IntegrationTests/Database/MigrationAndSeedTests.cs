@@ -94,8 +94,10 @@ public sealed class MigrationAndSeedTests(SqlServerDatabaseFixture fixture)
         (int users, int userRoles, int sections, int lessons) afterSecond = await CountDevelopmentAsync();
 
         Assert.Equal(afterFirst, afterSecond);
-        Assert.Equal(1, afterSecond.users);
-        Assert.Equal(2, afterSecond.userRoles);
+        // Two allowlisted Development profiles: the admin holds Admin + Student, the student
+        // holds Student only, so both sides of every role gate can be exercised locally.
+        Assert.Equal(2, afterSecond.users);
+        Assert.Equal(3, afterSecond.userRoles);
         Assert.Equal(2, afterSecond.sections);
         Assert.Equal(4, afterSecond.lessons);
     }
@@ -219,6 +221,38 @@ public sealed class MigrationAndSeedTests(SqlServerDatabaseFixture fixture)
         Assert.Equal(0, await context.WebhookEvents.CountAsync());
         Assert.Equal(0, await context.LessonProgress.CountAsync());
         Assert.Equal(0, await context.Enrollments.CountAsync());
+
+        // Forum categories are structure, not content. No fake member activity is ever seeded.
+        Assert.Equal(3, await context.ForumCategories.CountAsync());
+        Assert.Equal(0, await context.ForumThreads.CountAsync());
+        Assert.Equal(0, await context.ForumPosts.CountAsync());
+        Assert.Equal(0, await context.DirectMessages.CountAsync());
+        Assert.Equal(0, await context.FriendRequests.CountAsync());
+        Assert.Equal(0, await context.Notifications.CountAsync());
+        Assert.Equal(0, await context.Reports.CountAsync());
+
+        // Profiles are created by the member during setup, never seeded on their behalf.
+        Assert.Equal(0, await context.CommunityProfiles.CountAsync());
+    }
+
+    [Fact]
+    public async Task ReferenceSeed_CreatesNoUsersOrCommunityContent()
+    {
+        await fixture.ResetWithoutSeedAsync();
+
+        await using (DanielsDojoDbContext seedContext = fixture.CreateContext())
+        {
+            await SqlServerDatabaseFixture.CreateSeeder(seedContext, "Production")
+                .SeedAsync(SeedProfile.Reference);
+        }
+
+        await using DanielsDojoDbContext context = fixture.CreateContext();
+
+        // Reference data is safe for any environment: it must never invent a person.
+        Assert.Equal(0, await context.Users.CountAsync());
+        Assert.Equal(0, await context.CommunityProfiles.CountAsync());
+        Assert.Equal(0, await context.ForumCategories.CountAsync());
+        Assert.Equal(0, await context.ForumThreads.CountAsync());
     }
 
     [Fact]

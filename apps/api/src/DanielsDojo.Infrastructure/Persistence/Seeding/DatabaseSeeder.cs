@@ -1,6 +1,7 @@
 using DanielsDojo.Application.System;
 using DanielsDojo.Domain.Catalog;
 using DanielsDojo.Domain.Commerce;
+using DanielsDojo.Domain.Community;
 using DanielsDojo.Domain.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -34,14 +35,24 @@ public sealed partial class DatabaseSeeder(
     /// <summary>The only environment in which the Development profile may run.</summary>
     public const string DevelopmentEnvironmentName = "Development";
 
-    /// <summary>Issuer recorded for the deterministic local development account.</summary>
-    public const string DevelopmentSeedIssuer = "https://seed.danielsdojo.local/development";
+    /// <summary>
+    /// Tenant value recorded as <c>ExternalIssuer</c> for the local development accounts.
+    /// The Development authentication harness stamps the same value into its tokens' <c>tid</c>
+    /// claim so the existing (tid, oid) provisioning lookup resolves these seeded rows.
+    /// </summary>
+    public const string DevelopmentSeedIssuer = "00000000-0000-4000-8000-0000000d0d00";
 
-    /// <summary>Subject recorded for the deterministic local development account.</summary>
+    /// <summary>Subject recorded for the deterministic local development administrator.</summary>
     public const string DevelopmentSeedSubject = "development-admin";
+
+    /// <summary>Subject recorded for the deterministic local development student.</summary>
+    public const string DevelopmentSeedStudentSubject = "development-student";
 
     /// <summary>Email of the deterministic local development administrator.</summary>
     public const string DevelopmentAdminEmail = "admin@danielsdojo.local";
+
+    /// <summary>Email of the deterministic local development student.</summary>
+    public const string DevelopmentStudentEmail = "student@danielsdojo.local";
 
     /// <summary>
     /// Applies the requested profile inside a single transaction. Reruns are safe and leave
@@ -177,27 +188,23 @@ public sealed partial class DatabaseSeeder(
 
     private async Task SeedDevelopmentAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
-        bool adminExists = await context.Users
-            .AnyAsync(user => user.Id == SeedIds.DevelopmentAdminUser, cancellationToken)
-            .ConfigureAwait(false);
+        // Two allowlisted profiles, each with a fixed identity so the Development
+        // authentication harness can resolve them through the ordinary (tid, oid) lookup.
+        await AddDevelopmentUserIfAbsentAsync(
+            SeedIds.DevelopmentAdminUser,
+            DevelopmentSeedSubject,
+            DevelopmentAdminEmail,
+            "Development Admin",
+            now,
+            cancellationToken).ConfigureAwait(false);
 
-        if (!adminExists)
-        {
-            context.Users.Add(new User
-            {
-                Id = SeedIds.DevelopmentAdminUser,
-                IdentityProvider = "DevelopmentSeed",
-                ExternalIssuer = DevelopmentSeedIssuer,
-                ExternalSubjectId = DevelopmentSeedSubject,
-                Email = DevelopmentAdminEmail,
-                NormalizedEmail = DevelopmentAdminEmail.ToUpperInvariant(),
-                DisplayName = "Development Admin",
-                EmailVerified = true,
-                Status = UserStatus.Active,
-                CreatedAtUtc = now,
-                UpdatedAtUtc = now,
-            });
-        }
+        await AddDevelopmentUserIfAbsentAsync(
+            SeedIds.DevelopmentStudentUser,
+            DevelopmentSeedStudentSubject,
+            DevelopmentStudentEmail,
+            "Development Student",
+            now,
+            cancellationToken).ConfigureAwait(false);
 
         await AddUserRoleIfAbsentAsync(
             SeedIds.DevelopmentAdminUser, SeedIds.AdminRole, now, cancellationToken)
@@ -205,6 +212,14 @@ public sealed partial class DatabaseSeeder(
         await AddUserRoleIfAbsentAsync(
             SeedIds.DevelopmentAdminUser, SeedIds.StudentRole, now, cancellationToken)
             .ConfigureAwait(false);
+
+        // The student profile deliberately holds Student only, so the two profiles exercise
+        // both sides of every role gate.
+        await AddUserRoleIfAbsentAsync(
+            SeedIds.DevelopmentStudentUser, SeedIds.StudentRole, now, cancellationToken)
+            .ConfigureAwait(false);
+
+        await SeedForumCategoriesAsync(now, cancellationToken).ConfigureAwait(false);
 
         await AddSectionIfAbsentAsync(
             SeedIds.AtlasSectionOne, "Getting Started", sortOrder: 1, now, cancellationToken)
@@ -261,6 +276,98 @@ public sealed partial class DatabaseSeeder(
             body: "# Deployment Checklist\n\nSample development content.",
             now,
             cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Installs the starter forum categories. Categories are structural, not user content —
+    /// no fake threads, posts, or messages are ever seeded.
+    /// </summary>
+    private async Task SeedForumCategoriesAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        await AddForumCategoryIfAbsentAsync(
+            SeedIds.AnnouncementsForumCategory,
+            "announcements",
+            "Announcements",
+            "Platform and course news from the Daniel's Dojo team.",
+            sortOrder: 1,
+            now,
+            cancellationToken).ConfigureAwait(false);
+
+        await AddForumCategoryIfAbsentAsync(
+            SeedIds.GeneralForumCategory,
+            "general",
+            "General Discussion",
+            "Introductions, wins, and anything else that does not fit elsewhere.",
+            sortOrder: 2,
+            now,
+            cancellationToken).ConfigureAwait(false);
+
+        await AddForumCategoryIfAbsentAsync(
+            SeedIds.CourseHelpForumCategory,
+            "course-help",
+            "Course Help",
+            "Questions about course material and exercises.",
+            sortOrder: 3,
+            now,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task AddForumCategoryIfAbsentAsync(
+        Guid id,
+        string slug,
+        string name,
+        string description,
+        int sortOrder,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (await context.ForumCategories.AnyAsync(category => category.Id == id, cancellationToken)
+                .ConfigureAwait(false))
+        {
+            return;
+        }
+
+        context.ForumCategories.Add(new ForumCategory
+        {
+            Id = id,
+            Slug = slug,
+            Name = name,
+            Description = description,
+            SortOrder = sortOrder,
+            Status = ForumCategoryStatus.Active,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+        });
+    }
+
+    private async Task AddDevelopmentUserIfAbsentAsync(
+        Guid id,
+        string externalSubjectId,
+        string email,
+        string displayName,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (await context.Users.AnyAsync(user => user.Id == id, cancellationToken)
+                .ConfigureAwait(false))
+        {
+            return;
+        }
+
+        context.Users.Add(new User
+        {
+            Id = id,
+            IdentityProvider = "DevelopmentSeed",
+            ExternalIssuer = DevelopmentSeedIssuer,
+            ExternalSubjectId = externalSubjectId,
+            Email = email,
+            NormalizedEmail = email.ToUpperInvariant(),
+            DisplayName = displayName,
+            EmailVerified = true,
+            Status = UserStatus.Active,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+        });
     }
 
     private async Task AddRoleIfAbsentAsync(

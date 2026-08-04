@@ -37,6 +37,19 @@ public static class SeedIds
     /// <summary>Development-only administrator account.</summary>
     public static readonly Guid DevelopmentAdminUser = new("dd000040-0000-4000-8000-000000000001");
 
+    /// <summary>Development-only student account.</summary>
+    public static readonly Guid DevelopmentStudentUser = new("dd000040-0000-4000-8000-000000000002");
+
+    /// <summary>Development-only general discussion forum category.</summary>
+    public static readonly Guid GeneralForumCategory = new("dd000070-0000-4000-8000-000000000001");
+
+    /// <summary>Development-only course help forum category.</summary>
+    public static readonly Guid CourseHelpForumCategory = new("dd000070-0000-4000-8000-000000000002");
+
+    /// <summary>Development-only announcements forum category.</summary>
+    public static readonly Guid AnnouncementsForumCategory =
+        new("dd000070-0000-4000-8000-000000000003");
+
     /// <summary>Development-only first Atlas section.</summary>
     public static readonly Guid AtlasSectionOne = new("dd000050-0000-4000-8000-000000000001");
 

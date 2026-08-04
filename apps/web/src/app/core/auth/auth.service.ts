@@ -2,22 +2,30 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { MsalService } from '@azure/msal-angular';
 import { RedirectRequest } from '@azure/msal-browser';
 
-import { AUTH_CONFIG, isAuthConfigured } from '../configuration/auth-config';
+import {
+  AUTH_CONFIG,
+  isAuthConfigured,
+  isDevelopmentAuthAllowed,
+  isEntraConfigured,
+} from '../configuration/auth-config';
+import { DevelopmentAuthClient, DevelopmentProfileKey } from './development-auth';
 import { SessionApi } from './session-api';
 import { ROLE_ADMIN, Session, SessionState } from './session.model';
 
 /**
  * Owns sign-in, sign-out, and the session the UI renders.
  *
- * Authorization decisions are never made here from token contents. The service asks the API
- * who the caller is and what roles they hold; the token is only ever a bearer credential
- * handled by MSAL and the interceptor.
+ * Both authentication modes are hidden behind this one service, and both produce the
+ * same `/api/v1/auth/session` contract, so no screen branches on how the token was
+ * obtained. Authorization decisions are never made here from token contents — the
+ * service asks the API who the caller is and what roles they hold.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly msal = inject(MsalService);
   private readonly sessionApi = inject(SessionApi);
   private readonly config = inject(AUTH_CONFIG);
+  private readonly developmentAuth = inject(DevelopmentAuthClient);
 
   private readonly state = signal<SessionState>({ kind: 'loading' });
 
@@ -33,17 +41,25 @@ export class AuthService {
   /** Whether the API reported the Admin role for this user. */
   readonly isAdmin = computed(() => this.session()?.roles.includes(ROLE_ADMIN) ?? false);
 
-  /** Whether enough public configuration exists to attempt a real sign-in. */
+  /** Whether the app can authenticate at all in its current configuration. */
   readonly isConfigured = computed(() => isAuthConfigured(this.config));
 
-  /** Whether MSAL currently holds an account. */
+  /** Whether the Development harness is the active mode. */
+  readonly isDevelopmentMode = isDevelopmentAuthAllowed(this.config);
+
+  /** Whether MSAL or the Development harness currently holds a credential. */
   hasAccount(): boolean {
-    return this.msal.instance.getAllAccounts().length > 0;
+    return this.isDevelopmentMode
+      ? this.developmentAuth.read() !== null
+      : this.msal.instance.getAllAccounts().length > 0;
   }
 
-  /** Starts the redirect sign-up/sign-in flow against the configured user flow. */
+  /**
+   * Starts the Entra redirect flow. Not used in Development mode, where the caller
+   * uses {@link signInAsDevelopmentProfile} instead.
+   */
   signIn(): void {
-    if (!this.isConfigured()) {
+    if (!isEntraConfigured(this.config)) {
       this.state.set({ kind: 'error' });
       return;
     }
@@ -52,16 +68,37 @@ export class AuthService {
     this.msal.loginRedirect(request);
   }
 
-  /** Signs out and returns the browser to the configured post-logout URI. */
-  signOut(): void {
-    this.state.set({ kind: 'signedOut' });
-    this.msal.logoutRedirect({
-      postLogoutRedirectUri: this.config.postLogoutRedirectUri,
+  /** Signs in as one of the two seeded Development profiles. */
+  signInAsDevelopmentProfile(profile: DevelopmentProfileKey): void {
+    if (!this.isDevelopmentMode) {
+      this.state.set({ kind: 'error' });
+      return;
+    }
+
+    this.state.set({ kind: 'loading' });
+
+    this.developmentAuth.signIn(profile).subscribe({
+      next: () => this.refreshSession(),
+      error: () => this.state.set({ kind: 'error' }),
     });
   }
 
+  /** Signs out of whichever mode is active. */
+  signOut(): void {
+    this.state.set({ kind: 'signedOut' });
+
+    // Always cleared, in either mode, so a stale local token can never outlive a session.
+    this.developmentAuth.clear();
+
+    if (!this.isDevelopmentMode) {
+      this.msal.logoutRedirect({
+        postLogoutRedirectUri: this.config.postLogoutRedirectUri,
+      });
+    }
+  }
+
   /**
-   * Loads the session from the API. Called after redirect handling and on app start.
+   * Loads the session from the API.
    *
    * A 401 or 403 is an ordinary signed-out or refused state, not a crash: the UI shows a
    * recoverable message and no error body is surfaced to the user.
@@ -88,6 +125,8 @@ export class AuthService {
     const status = (error as { status?: number } | null)?.status;
 
     if (status === 401) {
+      // The credential is no longer accepted; drop it rather than retrying with it.
+      this.developmentAuth.clear();
       return { kind: 'signedOut' };
     }
 

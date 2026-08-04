@@ -1,71 +1,90 @@
+@use '../../../styles/tokens' as tokens;
+
 :host {
   display: block;
   min-height: 100vh;
 }
 
-.skip-link {
-  position: absolute;
-  left: var(--space-2);
-  top: -3rem;
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  transition: top 0.15s ease-in-out;
+.app-toolbar {
+  position: sticky;
+  top: 0;
   z-index: 10;
-}
-
-.skip-link:focus {
-  top: var(--space-2);
-}
-
-.app-header {
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-}
-
-.app-header__inner,
-.app-main__inner {
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-  padding: var(--space-4);
-}
-
-.app-header__inner {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
   align-items: center;
-  justify-content: space-between;
+  gap: var(--dd-space-2);
+  min-height: var(--dd-toolbar-height);
+  padding-inline: var(--dd-space-3);
+  background: var(--dd-primary);
+  color: var(--dd-on-primary);
+  box-shadow: var(--dd-elevation-2);
 }
 
-.app-header__brand {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-}
-
-.app-header__nav {
-  display: flex;
-  gap: var(--space-4);
-}
-
-.app-header__link {
+.app-toolbar__brand {
+  font-size: var(--dd-text-lg);
+  font-weight: var(--dd-weight-bold);
+  color: inherit;
   text-decoration: none;
-  font-weight: 500;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
+  white-space: nowrap;
 }
 
-.app-header__link:hover {
-  text-decoration: underline;
+.app-toolbar__spacer {
+  flex: 1 1 auto;
+}
+
+.app-toolbar__account {
+  color: inherit;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-toolbar__menu-glyph {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.app-layout {
+  height: calc(100vh - var(--dd-toolbar-height));
+  background: var(--dd-background);
+}
+
+.app-sidenav {
+  width: var(--dd-sidenav-width);
+  padding-block: var(--dd-space-2);
+  border-right: 1px solid var(--dd-outline);
+  background: var(--dd-surface);
+}
+
+.app-nav__heading {
+  padding: var(--dd-space-3) var(--dd-space-4) var(--dd-space-1);
+  margin: 0;
+  font-size: var(--dd-text-xs);
+  font-weight: var(--dd-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dd-on-surface-variant);
+}
+
+/* Active route is marked by weight and a left rule as well as colour, so the
+   cue is never carried by colour alone. */
+.app-nav--active {
+  font-weight: var(--dd-weight-bold);
+  color: var(--dd-primary);
+  box-shadow: inset 3px 0 0 var(--dd-primary);
 }
 
 .app-main {
   display: block;
+  min-height: 100%;
 }
 
-.app-main__inner {
-  padding-top: var(--space-6);
-  padding-bottom: var(--space-8);
+.app-main:focus {
+  outline: none;
+}
+
+@media (max-width: tokens.$breakpoint-md) {
+  .app-toolbar__account {
+    max-width: 7rem;
+  }
 }

@@ -129,8 +129,24 @@ finally {
     Pop-Location
 }
 
+# Cheap static guard against the one configuration mistake that would matter most: a
+# production build that selects the Development sign-in harness.
+Write-Host '==> [13/14] Scan for Development authentication in production configuration'
+$productionEnvironment = Get-Content 'apps/web/src/environments/environment.production.ts' -Raw
+if ($productionEnvironment -notmatch "mode:\s*'entra'") {
+    throw 'apps/web/src/environments/environment.production.ts must pin the auth mode to entra.'
+}
+if ($productionEnvironment -notmatch 'production:\s*true') {
+    throw 'apps/web/src/environments/environment.production.ts must set production: true.'
+}
+$apiSettings = Get-Content 'apps/api/src/DanielsDojo.Api/appsettings.json' -Raw
+if ($apiSettings -match '"Development"\s*:\s*\{[^}]*"Enabled"\s*:\s*true') {
+    throw 'appsettings.json must not enable the Development authentication harness.'
+}
+Write-Host '    production configuration excludes the Development auth harness'
+
 # Docker availability was already asserted before the test step, so this always runs.
-Write-Host '==> [13/13] Build API Docker image'
+Write-Host '==> [14/14] Build API Docker image'
 Invoke-Checked { docker build -f apps/api/Dockerfile -t daniels-dojo-api:verify . }
 
 Write-Host ''

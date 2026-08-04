@@ -70,6 +70,7 @@ public sealed class SqlServerDatabaseFixture : IAsyncLifetime
                 DatabaseSchemas.Commerce,
                 DatabaseSchemas.Learning,
                 DatabaseSchemas.Audit,
+                DatabaseSchemas.Community,
             ],
             DbAdapter = DbAdapter.SqlServer,
         });

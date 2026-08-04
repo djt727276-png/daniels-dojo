@@ -15,6 +15,10 @@ export const environment: { readonly production: boolean; readonly auth: AuthCon
   production: false,
 
   auth: {
+    // Local seeded-profile harness, so the product can be exercised end to end before the
+    // external tenant exists. Switch to 'entra' once the tenant values below are supplied.
+    mode: 'development',
+
     // Empty until a real external tenant is configured. No tenant or client ID is invented.
     authority: '',
     clientId: '',

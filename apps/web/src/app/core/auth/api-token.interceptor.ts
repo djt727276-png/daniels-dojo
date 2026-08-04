@@ -3,7 +3,13 @@ import { inject } from '@angular/core';
 import { MsalService } from '@azure/msal-angular';
 import { Observable, from, switchMap } from 'rxjs';
 
-import { AUTH_CONFIG, AuthConfig, isAuthConfigured } from '../configuration/auth-config';
+import {
+  AUTH_CONFIG,
+  AuthConfig,
+  isAuthConfigured,
+  isDevelopmentAuthAllowed,
+} from '../configuration/auth-config';
+import { DevelopmentAuthClient } from './development-auth';
 
 /**
  * Attaches an API access token to requests aimed at the configured API, and to nothing else.
@@ -12,6 +18,8 @@ import { AUTH_CONFIG, AuthConfig, isAuthConfigured } from '../configuration/auth
  * match is deliberately strict: the request URL must resolve to the exact configured origin
  * *and* sit under the configured base path. A lookalike host, a third-party URL, or a path
  * that merely starts with the same characters never receives a token.
+ *
+ * The target rule is identical in both authentication modes; only the token source differs.
  */
 export const apiTokenInterceptor: HttpInterceptorFn = (
   request: HttpRequest<unknown>,
@@ -19,9 +27,20 @@ export const apiTokenInterceptor: HttpInterceptorFn = (
 ): Observable<HttpEvent<unknown>> => {
   const config = inject(AUTH_CONFIG);
   const msal = inject(MsalService);
+  const developmentAuth = inject(DevelopmentAuthClient);
 
   if (!isAuthConfigured(config) || !targetsConfiguredApi(request.url, config)) {
     return next(request);
+  }
+
+  if (isDevelopmentAuthAllowed(config)) {
+    const developmentToken = developmentAuth.read();
+
+    return next(
+      developmentToken
+        ? request.clone({ setHeaders: { Authorization: `Bearer ${developmentToken}` } })
+        : request,
+    );
   }
 
   const account = msal.instance.getAllAccounts()[0];

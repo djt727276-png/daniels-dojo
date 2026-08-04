@@ -41,16 +41,27 @@ describe('AppShell', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('renders header and main landmarks with the product title', () => {
+  it('renders banner and main landmarks with the product title', () => {
     const { fixture } = setup();
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
 
-    const header = element.querySelector('header');
-    expect(header).toBeTruthy();
-    expect(header?.textContent).toContain("Daniel's Dojo");
+    // The Material toolbar carries role="banner" so the site-header landmark survives.
+    const banner = element.querySelector('[role="banner"]');
+    expect(banner).toBeTruthy();
+    expect(banner?.textContent).toContain("Daniel's Dojo");
 
     expect(element.querySelector('main')).toBeTruthy();
+  });
+
+  it('exposes a skip link targeting the main landmark', () => {
+    const { fixture } = setup();
+    fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+
+    const skipLink = element.querySelector<HTMLAnchorElement>('.dd-skip-link');
+    expect(skipLink?.getAttribute('href')).toBe('#main-content');
+    expect(element.querySelector('main')?.id).toBe('main-content');
   });
 
   it('exposes a Home navigation link', () => {

@@ -1,0 +1,141 @@
+/* -------------------------------------------------------------------------
+   Daniel's Dojo — design tokens.
+
+   The single source of truth for colour, typography, spacing, radius,
+   elevation, layout widths, and breakpoints. Components reference these
+   variables; no component hard-codes a colour or size.
+
+   Light theme values live here now. The structure is deliberately split into
+   role tokens (surface / on-surface / outline …) rather than raw palette
+   names, so a dark theme can be added later by re-declaring the same roles
+   under a `[data-theme='dark']` selector without touching any component.
+   ------------------------------------------------------------------------- */
+
+// Breakpoints. Exposed as Sass values because media queries cannot read
+// custom properties.
+$breakpoint-sm: 37.5rem; // 600px  — small tablet / large phone
+$breakpoint-md: 56.25rem; // 900px  — tablet, sidenav becomes permanent
+$breakpoint-lg: 75rem; // 1200px — wide desktop
+
+// Narrowest layout the product must remain usable at.
+$min-supported-width: 20rem; // 320px
+
+:root {
+  /* --- Brand palette ------------------------------------------------------
+     Deep navy/indigo primary, restrained violet tertiary, warm amber reserved
+     exclusively for achievement/progress so it keeps its meaning. */
+  --dd-primary: #26418f;
+  --dd-primary-hover: #1d3372;
+  --dd-primary-container: #dde3f8;
+  --dd-on-primary: #ffffff;
+  --dd-on-primary-container: #101b3f;
+
+  --dd-tertiary: #5b4b8a;
+  --dd-tertiary-container: #e8e2f5;
+  --dd-on-tertiary: #ffffff;
+  --dd-on-tertiary-container: #241c3d;
+
+  --dd-accent: #b26a00;
+  --dd-accent-container: #ffeccc;
+  --dd-on-accent: #ffffff;
+  --dd-on-accent-container: #3d2400;
+
+  /* --- Neutral surfaces --------------------------------------------------- */
+  --dd-background: #f6f7fb;
+  --dd-surface: #ffffff;
+  --dd-surface-variant: #eef0f6;
+  --dd-surface-raised: #ffffff;
+  --dd-on-surface: #1a1d26;
+  --dd-on-surface-variant: #4a5060;
+  --dd-outline: #c8cdda;
+  --dd-outline-strong: #9aa2b5;
+
+  /* --- Semantic states ----------------------------------------------------
+     Each state pairs a foreground with a container so status is never carried
+     by colour alone — components also render an icon or text label. */
+  --dd-success: #17663a;
+  --dd-success-container: #dcf1e5;
+  --dd-warning: #8a5300;
+  --dd-warning-container: #fdeccd;
+  --dd-danger: #a1231b;
+  --dd-danger-container: #fbe4e2;
+  --dd-info: #125a72;
+  --dd-info-container: #d9eef6;
+
+  /* --- Typography ---------------------------------------------------------
+     System font stack: no web font is downloaded, so text never depends on a
+     network request. */
+  --dd-font-sans:
+    system-ui, -apple-system, 'Segoe UI', roboto, helvetica, arial, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji';
+  --dd-font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', menlo, consolas, monospace;
+
+  --dd-text-xs: 0.75rem;
+  --dd-text-sm: 0.875rem;
+  --dd-text-base: 1rem;
+  --dd-text-lg: 1.125rem;
+  --dd-text-xl: 1.375rem;
+  --dd-text-2xl: 1.75rem;
+  --dd-text-3xl: 2.25rem;
+
+  --dd-leading-tight: 1.25;
+  --dd-leading-base: 1.55;
+
+  --dd-weight-regular: 400;
+  --dd-weight-medium: 500;
+  --dd-weight-bold: 700;
+
+  /* --- Spacing scale ------------------------------------------------------ */
+  --dd-space-1: 0.25rem;
+  --dd-space-2: 0.5rem;
+  --dd-space-3: 0.75rem;
+  --dd-space-4: 1rem;
+  --dd-space-5: 1.5rem;
+  --dd-space-6: 2rem;
+  --dd-space-8: 3rem;
+  --dd-space-10: 4rem;
+
+  /* --- Radius ------------------------------------------------------------- */
+  --dd-radius-sm: 6px;
+  --dd-radius-md: 10px;
+  --dd-radius-lg: 16px;
+  --dd-radius-pill: 999px;
+
+  /* --- Elevation ---------------------------------------------------------- */
+  --dd-elevation-0: none;
+  --dd-elevation-1: 0 1px 2px rgb(26 29 38 / 8%);
+  --dd-elevation-2: 0 2px 8px rgb(26 29 38 / 10%);
+  --dd-elevation-3: 0 8px 24px rgb(26 29 38 / 12%);
+
+  /* --- Layout ------------------------------------------------------------- */
+  --dd-content-max: 76rem;
+  --dd-reading-max: 44rem;
+  --dd-sidenav-width: 16rem;
+  --dd-toolbar-height: 3.5rem;
+
+  /* --- Motion -------------------------------------------------------------
+     Durations are tokenised so the reduced-motion rule below can zero them in
+     one place rather than per component. */
+  --dd-motion-fast: 120ms;
+  --dd-motion-base: 200ms;
+  --dd-motion-slow: 320ms;
+  --dd-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Honour the operating-system reduced-motion preference everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dd-motion-fast: 1ms;
+    --dd-motion-base: 1ms;
+    --dd-motion-slow: 1ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

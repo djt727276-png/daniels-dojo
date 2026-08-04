@@ -86,8 +86,26 @@ echo "==> [12/13] Frontend unit tests and production build"
 ( cd "$WEB_DIR" && npm run test:ci )
 ( cd "$WEB_DIR" && npm run build )
 
+# Cheap static guard against the one configuration mistake that would matter most: a
+# production build that selects the Development sign-in harness.
+echo "==> [13/14] Scan for Development authentication in production configuration"
+if ! grep -qE "mode:[[:space:]]*'entra'" apps/web/src/environments/environment.production.ts; then
+  echo "ERROR: environment.production.ts must pin the auth mode to entra." >&2
+  exit 1
+fi
+if ! grep -qE 'production:[[:space:]]*true' apps/web/src/environments/environment.production.ts; then
+  echo "ERROR: environment.production.ts must set production: true." >&2
+  exit 1
+fi
+if grep -Pzoq '"Development"\s*:\s*\{[^}]*"Enabled"\s*:\s*true' \
+     apps/api/src/DanielsDojo.Api/appsettings.json; then
+  echo "ERROR: appsettings.json must not enable the Development authentication harness." >&2
+  exit 1
+fi
+echo "    production configuration excludes the Development auth harness"
+
 # Docker availability was already asserted before the test step, so this always runs.
-echo "==> [13/13] Build API Docker image"
+echo "==> [14/14] Build API Docker image"
 docker build -f apps/api/Dockerfile -t daniels-dojo-api:verify .
 
 echo ""

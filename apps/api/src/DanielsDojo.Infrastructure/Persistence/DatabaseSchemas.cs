@@ -21,6 +21,9 @@ public static class DatabaseSchemas
     /// <summary>Append-only audit trail.</summary>
     public const string Audit = "audit";
 
+    /// <summary>Profiles, forum, relationships, messaging, notifications, and reports.</summary>
+    public const string Community = "community";
+
     /// <summary>EF Core migration history. Never cleared by test resets.</summary>
     public const string Infrastructure = "infrastructure";
 }

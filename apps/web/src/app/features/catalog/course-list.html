@@ -1,0 +1,109 @@
+<div class="dd-page dd-stack">
+  <app-page-header
+    title="Courses"
+    description="Practical, production-focused courses. Buy a course outright or get everything with a membership."
+  />
+
+  <form class="filters" [formGroup]="filters" (ngSubmit)="load()">
+    <mat-form-field appearance="outline" class="filters__search">
+      <mat-label>Search courses</mat-label>
+      <input matInput formControlName="search" type="search" data-testid="catalog-search" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Level</mat-label>
+      <mat-select formControlName="level" data-testid="catalog-level">
+        <mat-option value="">Any level</mat-option>
+        @for (level of levels; track level) {
+          <mat-option [value]="level">{{ formatLevel(level) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tag</mat-label>
+      <input matInput formControlName="tag" data-testid="catalog-tag" />
+    </mat-form-field>
+
+    <button matButton type="button" (click)="clearFilters()" data-testid="catalog-clear">
+      Clear
+    </button>
+  </form>
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <app-loading-state message="Loading courses…" />
+    }
+
+    @case ('error') {
+      <app-error-state message="We could not load the catalog just now." (retry)="load()" />
+    }
+
+    @default {
+      @if (state(); as current) {
+        @if (current.kind === 'ready') {
+          @if (current.page.items.length === 0) {
+            <app-empty-state
+              title="No courses match those filters"
+              message="Try a different search term, level, or tag."
+              actionLabel="Clear filters"
+              (action)="clearFilters()"
+            />
+          } @else {
+            <ul class="courses" data-testid="course-grid">
+              @for (course of current.page.items; track course.slug) {
+                <li>
+                  <mat-card appearance="outlined" class="course">
+                    <mat-card-content class="course__body">
+                      <h2 class="course__title">
+                        <a [routerLink]="['/courses', course.slug]">{{ course.title }}</a>
+                      </h2>
+                      <p class="course__summary">{{ course.summary }}</p>
+
+                      <mat-chip-set aria-label="Course tags">
+                        <mat-chip disabled>{{ formatLevel(course.level) }}</mat-chip>
+                        @for (tag of course.tags; track tag) {
+                          <mat-chip disabled>{{ tag }}</mat-chip>
+                        }
+                      </mat-chip-set>
+
+                      <dl class="course__pricing">
+                        @if (course.lifetimePrice) {
+                          <dt>Buy this course</dt>
+                          <dd data-testid="lifetime-price">
+                            {{ formatPrice(course.lifetimePrice) }}
+                          </dd>
+                        }
+                        @if (course.includedInMembership && course.membershipPrice) {
+                          <dt>Or with membership</dt>
+                          <dd data-testid="membership-price">
+                            {{ formatPrice(course.membershipPrice) }}
+                          </dd>
+                        }
+                      </dl>
+                    </mat-card-content>
+
+                    <mat-card-actions>
+                      <a matButton="filled" [routerLink]="['/courses', course.slug]">
+                        View course
+                      </a>
+                    </mat-card-actions>
+                  </mat-card>
+                </li>
+              }
+            </ul>
+
+            <mat-paginator
+              [length]="current.page.totalCount"
+              [pageIndex]="current.page.page - 1"
+              [pageSize]="current.page.pageSize"
+              [pageSizeOptions]="[12, 24, 48]"
+              (page)="onPage($event)"
+              aria-label="Select page of courses"
+            />
+          }
+        }
+      }
+    }
+  }
+</div>

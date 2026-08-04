@@ -1,6 +1,7 @@
 using DanielsDojo.Domain.Auditing;
 using DanielsDojo.Domain.Catalog;
 using DanielsDojo.Domain.Commerce;
+using DanielsDojo.Domain.Community;
 using DanielsDojo.Domain.Identity;
 using DanielsDojo.Domain.Learning;
 using Microsoft.EntityFrameworkCore;
@@ -91,6 +92,48 @@ public sealed class DanielsDojoDbContext(DbContextOptions<DanielsDojoDbContext> 
 
     /// <summary>Per-lesson progress.</summary>
     public DbSet<LessonProgress> LessonProgress => Set<LessonProgress>();
+
+    /// <summary>Community profiles.</summary>
+    public DbSet<CommunityProfile> CommunityProfiles => Set<CommunityProfile>();
+
+    /// <summary>Forum categories.</summary>
+    public DbSet<ForumCategory> ForumCategories => Set<ForumCategory>();
+
+    /// <summary>Forum threads.</summary>
+    public DbSet<ForumThread> ForumThreads => Set<ForumThread>();
+
+    /// <summary>Forum posts.</summary>
+    public DbSet<ForumPost> ForumPosts => Set<ForumPost>();
+
+    /// <summary>Reactions on forum posts.</summary>
+    public DbSet<ForumPostReaction> ForumPostReactions => Set<ForumPostReaction>();
+
+    /// <summary>Thread subscriptions.</summary>
+    public DbSet<ForumSubscription> ForumSubscriptions => Set<ForumSubscription>();
+
+    /// <summary>Friend requests.</summary>
+    public DbSet<FriendRequest> FriendRequests => Set<FriendRequest>();
+
+    /// <summary>Accepted friendships.</summary>
+    public DbSet<Friendship> Friendships => Set<Friendship>();
+
+    /// <summary>Directed member blocks.</summary>
+    public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
+
+    /// <summary>One-to-one conversations.</summary>
+    public DbSet<DirectConversation> DirectConversations => Set<DirectConversation>();
+
+    /// <summary>Direct messages.</summary>
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
+
+    /// <summary>Per-member conversation read positions.</summary>
+    public DbSet<ConversationReadState> ConversationReadStates => Set<ConversationReadState>();
+
+    /// <summary>Notification inbox entries.</summary>
+    public DbSet<Notification> Notifications => Set<Notification>();
+
+    /// <summary>Member reports awaiting or past moderation.</summary>
+    public DbSet<Report> Reports => Set<Report>();
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)

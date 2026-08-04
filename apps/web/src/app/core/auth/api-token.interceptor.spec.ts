@@ -2,6 +2,7 @@ import { AuthConfig } from '../configuration/auth-config';
 import { targetsConfiguredApi } from './api-token.interceptor';
 
 const config: AuthConfig = {
+  mode: 'entra',
   authority: 'https://danielsdojo.ciamlogin.com/tenant/v2.0',
   clientId: 'spa-client-id',
   redirectUri: 'http://localhost:4200/',

@@ -7,7 +7,12 @@ import {
   PublicClientApplication,
 } from '@azure/msal-browser';
 
-import { AUTH_CONFIG, AuthConfig, isAuthConfigured } from '../configuration/auth-config';
+import {
+  AUTH_CONFIG,
+  AuthConfig,
+  isDevelopmentAuthAllowed,
+  isEntraConfigured,
+} from '../configuration/auth-config';
 import { AuthService } from './auth.service';
 
 /**
@@ -64,7 +69,14 @@ export function provideAuth(): (Provider | EnvironmentProviders)[] {
       const msal = inject(MsalService);
       const auth = inject(AuthService);
 
-      if (!isAuthConfigured(config)) {
+      // Development mode never touches MSAL: no instance is initialised and no redirect
+      // is handled, so the two token sources cannot interfere with each other.
+      if (isDevelopmentAuthAllowed(config)) {
+        auth.refreshSession();
+        return;
+      }
+
+      if (!isEntraConfigured(config)) {
         return;
       }
 

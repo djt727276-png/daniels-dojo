@@ -20,6 +20,46 @@ public static class AuthenticationRegistration
     /// <summary>Named CORS policy for the configured Angular origin.</summary>
     public const string CorsPolicy = "DanielsDojoSpa";
 
+    /// <summary>Scheme that routes a request to the Entra or Development handler.</summary>
+    private const string SelectorScheme = "DanielsDojoScheme";
+
+    /// <summary>
+    /// Chooses the handler for a request by reading the bearer token's issuer.
+    /// </summary>
+    /// <remarks>
+    /// This only routes; it never accepts anything. The selected handler still performs full
+    /// signature, issuer, audience, and lifetime validation, so a token that merely claims the
+    /// Development issuer is rejected unless it was signed by this process's key.
+    /// </remarks>
+    private static string SelectSchemeForRequest(HttpContext context)
+    {
+        string? header = context.Request.Headers.Authorization.ToString();
+
+        if (string.IsNullOrEmpty(header)
+            || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return JwtBearerDefaults.AuthenticationScheme;
+        }
+
+        string token = header["Bearer ".Length..].Trim();
+
+        try
+        {
+            Microsoft.IdentityModel.JsonWebTokens.JsonWebToken parsed =
+                new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler()
+                    .ReadJsonWebToken(token);
+
+            return string.Equals(parsed.Issuer, DevelopmentAuthOptions.Issuer, StringComparison.Ordinal)
+                ? DevelopmentAuthOptions.SchemeName
+                : JwtBearerDefaults.AuthenticationScheme;
+        }
+        catch (ArgumentException)
+        {
+            // Unparseable token: hand it to the Entra handler, which rejects it as usual.
+            return JwtBearerDefaults.AuthenticationScheme;
+        }
+    }
+
     /// <summary>
     /// Registers configuration, bearer validation, and role policies. Configuration is validated
     /// on start so a misconfigured deployment fails immediately rather than at the first
@@ -27,10 +67,12 @@ public static class AuthenticationRegistration
     /// </summary>
     public static IServiceCollection AddDanielsDojoAuthentication(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(environment);
 
         services.AddOptions<EntraExternalIdOptions>()
             .Bind(configuration.GetSection(EntraExternalIdOptions.SectionName))
@@ -40,11 +82,72 @@ public static class AuthenticationRegistration
             provider => new EntraExternalIdOptionsValidator(
                 provider.GetRequiredService<IHostEnvironment>()));
 
+        services.AddOptions<DevelopmentAuthOptions>()
+            .Bind(configuration.GetSection(DevelopmentAuthOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<IValidateOptions<DevelopmentAuthOptions>>(
+            provider => new DevelopmentAuthOptionsValidator(
+                provider.GetRequiredService<IHostEnvironment>()));
+
         EntraExternalIdOptions settings = new();
         configuration.GetSection(EntraExternalIdOptions.SectionName).Bind(settings);
 
-        AuthenticationBuilder authentication =
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
+        DevelopmentAuthOptions developmentSettings = new();
+        configuration.GetSection(DevelopmentAuthOptions.SectionName).Bind(developmentSettings);
+
+        // Two independent conditions. The environment check is not configurable, so no
+        // setting can switch the harness on outside Development.
+        bool developmentAuthActive =
+            DevelopmentAuthOptions.IsExactlyDevelopment(environment) && developmentSettings.Enabled;
+
+        // With the harness active the default scheme is a selector: the local-user resolution
+        // middleware runs before authorization and needs an authenticated principal, so the
+        // right handler has to be chosen during UseAuthentication rather than later.
+        AuthenticationBuilder authentication = services.AddAuthentication(
+            developmentAuthActive ? SelectorScheme : JwtBearerDefaults.AuthenticationScheme);
+
+        if (developmentAuthActive)
+        {
+            authentication.AddPolicyScheme(SelectorScheme, SelectorScheme, policyOptions =>
+                policyOptions.ForwardDefaultSelector = SelectSchemeForRequest);
+        }
+
+        if (developmentAuthActive)
+        {
+            // One signing key per process, generated in memory and never persisted, so a
+            // restart invalidates every previously issued Development token.
+            services.AddSingleton<DevelopmentSigningKey>();
+
+            authentication.AddJwtBearer(DevelopmentAuthOptions.SchemeName, jwtOptions =>
+            {
+                jwtOptions.RequireHttpsMetadata = false;
+                jwtOptions.MapInboundClaims = false;
+                jwtOptions.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    RequireSignedTokens = true,
+                    ValidateIssuer = true,
+                    ValidIssuer = DevelopmentAuthOptions.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = DevelopmentAuthOptions.Audience,
+                    ValidateLifetime = true,
+                    RequireExpirationTime = true,
+                    ClockSkew = TimeSpan.FromSeconds(30),
+                    NameClaimType = "name",
+                    RoleClaimType = "__unused_role_claim__",
+                };
+            });
+
+            // The signing key is only known once the container is built, so it is attached
+            // to the scheme afterwards.
+            services.AddOptions<JwtBearerOptions>(DevelopmentAuthOptions.SchemeName)
+                .Configure<DevelopmentSigningKey>((jwtOptions, signingKey) =>
+                {
+                    jwtOptions.TokenValidationParameters.IssuerSigningKey = signingKey.PublicKey;
+                    jwtOptions.TokenValidationParameters.IssuerSigningKeys = [signingKey.PublicKey];
+                });
+        }
 
         if (settings.Enabled)
         {
@@ -110,10 +213,29 @@ public static class AuthenticationRegistration
                 };
             });
 
+        if (developmentAuthActive)
+        {
+            // The harness mints tokens whose authorized party is its own fixed client. Adding
+            // it to the allowlist here — rather than in configuration — means the value cannot
+            // be introduced by a settings file in any other environment.
+            services.PostConfigure<EntraExternalIdOptions>(entraOptions =>
+            {
+                if (!entraOptions.AllowedClientIds.Contains(DevelopmentAuthOptions.ClientId))
+                {
+                    entraOptions.AllowedClientIds.Add(DevelopmentAuthOptions.ClientId);
+                }
+            });
+        }
+
         services.AddScoped<CurrentUserAccessor>();
         services.AddScoped<ICurrentUser>(provider => provider.GetRequiredService<CurrentUserAccessor>());
         services.AddScoped<IAuthorizationHandler, ApplicationRoleHandler>();
 
+        // Both schemes feed the same policies, so authorization is expressed once regardless of
+        // how the caller authenticated. The Development scheme is only listed when it exists.
+        // Policies name no scheme, so they evaluate whatever the default scheme authenticated —
+        // the selector above when the harness is active, the Entra handler otherwise. The
+        // authorization rules themselves are identical either way.
         services.AddAuthorizationBuilder()
             .AddPolicy(StudentPolicy, policy => policy
                 .RequireAuthenticatedUser()

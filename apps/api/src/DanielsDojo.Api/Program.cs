@@ -1,9 +1,11 @@
 using DanielsDojo.Api.Authentication;
+using DanielsDojo.Api.Catalog;
 using DanielsDojo.Api.Hosting;
 using DanielsDojo.Application.Identity;
 using DanielsDojo.Application.System;
 using DanielsDojo.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +28,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Entra External ID bearer validation plus local, database-backed application authorization.
-builder.Services.AddDanielsDojoAuthentication(builder.Configuration);
+// The Development sign-in harness is registered only inside the Development environment.
+builder.Services.AddDanielsDojoAuthentication(builder.Configuration, builder.Environment);
 
 // System-status vertical slice: injectable time + host-environment abstraction.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -73,11 +76,22 @@ app.UseAuthentication();
 app.UseMiddleware<LocalUserProvisioningMiddleware>();
 app.UseAuthorization();
 
+// Development sign-in harness. Mapped only inside Development with the harness enabled, so
+// the route simply does not exist elsewhere and the API answers 404 rather than 403.
+if (DevelopmentAuthOptions.IsExactlyDevelopment(app.Environment)
+    && app.Services.GetRequiredService<IOptions<DevelopmentAuthOptions>>().Value.Enabled)
+{
+    app.MapDevelopmentAuthEndpoints();
+}
+
 // Versioned, unauthenticated system-status endpoint.
 var apiV1 = app.MapGroup("/api/v1");
 apiV1.MapGet("/system/status",
     (ISystemStatusService statusService) => TypedResults.Ok(statusService.GetStatus()))
     .AllowAnonymous();
+
+// Anonymous catalog: published projections only.
+apiV1.MapPublicCatalogEndpoints();
 
 // Authenticated session view. Every value comes from the local user record resolved by the
 // provisioning middleware, never from the token.

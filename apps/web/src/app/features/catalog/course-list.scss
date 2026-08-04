@@ -1,0 +1,79 @@
+@use '../../../styles/tokens' as tokens;
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dd-space-3);
+}
+
+.filters__search {
+  flex: 1 1 18rem;
+}
+
+.courses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--dd-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.course__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-3);
+  flex: 1;
+}
+
+.course__title {
+  font-size: var(--dd-text-lg);
+  font-weight: var(--dd-weight-bold);
+  line-height: var(--dd-leading-tight);
+
+  a {
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+}
+
+.course__summary {
+  color: var(--dd-on-surface-variant);
+}
+
+.course__pricing {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--dd-space-1) var(--dd-space-3);
+  margin: 0;
+  margin-top: auto;
+  padding-top: var(--dd-space-3);
+  border-top: 1px solid var(--dd-outline);
+
+  dt {
+    color: var(--dd-on-surface-variant);
+    font-size: var(--dd-text-sm);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: var(--dd-weight-bold);
+    text-align: right;
+  }
+}
+
+@media (max-width: tokens.$breakpoint-sm) {
+  .courses {
+    grid-template-columns: 1fr;
+  }
+}

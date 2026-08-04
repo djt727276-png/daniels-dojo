@@ -3,12 +3,28 @@ import { InjectionToken } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
 /**
+ * How the browser obtains an access token.
+ *
+ * `entra` is the only mode a production build may use. `development` selects the
+ * local seeded-profile harness, which exists so the product can be exercised end to
+ * end before the external tenant is configured.
+ */
+export type AuthMode = 'entra' | 'development';
+
+/**
  * Public Entra External ID settings for the browser.
  *
  * Every value here is a public identifier or URL. A SPA is a public client: it holds no
  * secret, and none may ever be added to this file or to any build configuration.
  */
 export interface AuthConfig {
+  /**
+   * Selects the token source. The production environment file pins this to `entra`;
+   * see {@link isDevelopmentAuthAllowed}, which additionally refuses the development
+   * harness whenever the bundle was built for production.
+   */
+  readonly mode: AuthMode;
+
   /** External ID authority for the customer user flow. */
   readonly authority: string;
 
@@ -49,7 +65,29 @@ export const AUTH_CONFIG = new InjectionToken<AuthConfig>('AUTH_CONFIG', {
   factory: () => environment.auth,
 });
 
-/** Whether enough configuration is present to attempt a real sign-in. */
-export function isAuthConfigured(config: AuthConfig): boolean {
+/**
+ * Whether the Development authentication harness may run.
+ *
+ * Two independent conditions, both required: the environment must request the mode,
+ * **and** the bundle must not be a production build. `environment.production` is
+ * compiled in through `fileReplacements`, so a production bundle cannot activate the
+ * harness even if someone edits the mode — the second condition is constant-folded
+ * to false at build time.
+ */
+export function isDevelopmentAuthAllowed(config: AuthConfig): boolean {
+  return config.mode === 'development' && !environment.production;
+}
+
+/** Whether enough configuration is present to attempt a real Entra sign-in. */
+export function isEntraConfigured(config: AuthConfig): boolean {
   return config.authority.length > 0 && config.clientId.length > 0 && config.apiScope.length > 0;
+}
+
+/**
+ * Whether the app can authenticate at all in its current configuration.
+ *
+ * Kept as the single question the UI asks, so screens do not branch on mode.
+ */
+export function isAuthConfigured(config: AuthConfig): boolean {
+  return isDevelopmentAuthAllowed(config) || isEntraConfigured(config);
 }

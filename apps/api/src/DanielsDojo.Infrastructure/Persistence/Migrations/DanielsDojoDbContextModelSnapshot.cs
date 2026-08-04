@@ -1269,6 +1269,731 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DanielsDojo.Domain.Community.CommunityProfile", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AvatarStorageKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("EligibilityAttestedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("FriendRequestPolicy")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset?>("GuidelinesAcceptedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("GuidelinesVersion")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Handle")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<bool>("IsDiscoverable")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MessagePolicy")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("NormalizedHandle")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("NormalizedHandle")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Profiles_NormalizedHandle");
+
+                    b.HasIndex("IsDiscoverable", "NormalizedHandle")
+                        .HasDatabaseName("IX_Profiles_IsDiscoverable_NormalizedHandle");
+
+                    b.ToTable("Profiles", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_Profiles_FriendRequestPolicy", "[FriendRequestPolicy] IN ('NoOne', 'Everyone')");
+
+                            t.HasCheckConstraint("CK_Profiles_GuidelinesPaired", "([GuidelinesVersion] IS NULL AND [GuidelinesAcceptedAtUtc] IS NULL) OR ([GuidelinesVersion] IS NOT NULL AND [GuidelinesAcceptedAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Profiles_MessagePolicy", "[MessagePolicy] IN ('NoOne', 'FriendsOnly')");
+
+                            t.HasCheckConstraint("CK_Profiles_Status", "[Status] IN ('Active', 'Suspended', 'Deactivated')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ConversationReadState", b =>
+                {
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("LastReadAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid?>("LastReadMessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("ConversationId", "UserId");
+
+                    b.HasIndex("LastReadMessageId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_ConversationReadStates_UserId");
+
+                    b.ToTable("ConversationReadStates", "community");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.DirectConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("LastMessageAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid>("UserHighId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserLowId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserHighId", "LastMessageAtUtc")
+                        .HasDatabaseName("IX_DirectConversations_UserHighId_LastMessageAtUtc");
+
+                    b.HasIndex("UserLowId", "LastMessageAtUtc")
+                        .HasDatabaseName("IX_DirectConversations_UserLowId_LastMessageAtUtc");
+
+                    b.HasIndex("UserLowId", "UserHighId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_DirectConversations_Pair");
+
+                    b.ToTable("DirectConversations", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_DirectConversations_CanonicalPair", "CONVERT(char(36), [UserLowId]) < CONVERT(char(36), [UserHighId])");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.DirectMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("DeletedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("EditedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("SenderUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderUserId");
+
+                    b.HasIndex("ConversationId", "CreatedAtUtc", "Id")
+                        .HasDatabaseName("IX_DirectMessages_ConversationId_CreatedAtUtc_Id");
+
+                    b.ToTable("DirectMessages", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_DirectMessages_DeletedIsTombstoned", "[Status] <> 'Deleted' OR ([DeletedAtUtc] IS NOT NULL AND LEN([Body]) = 0)");
+
+                            t.HasCheckConstraint("CK_DirectMessages_EditedHasTimestamp", "[Status] <> 'Edited' OR [EditedAtUtc] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_DirectMessages_Status", "[Status] IN ('Sent', 'Edited', 'Deleted')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ForumCategories_Slug");
+
+                    b.HasIndex("Status", "SortOrder")
+                        .HasDatabaseName("IX_ForumCategories_Status_SortOrder");
+
+                    b.ToTable("ForumCategories", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_ForumCategories_SortOrder_NonNegative", "[SortOrder] >= 0");
+
+                            t.HasCheckConstraint("CK_ForumCategories_Status", "[Status] IN ('Active', 'Archived')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumPost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("EditedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("RemovedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid?>("ReplyToPostId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("ThreadId", "Id")
+                        .HasName("AK_ForumPosts_ThreadId_Id");
+
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("IX_ForumPosts_AuthorUserId");
+
+                    b.HasIndex("ThreadId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_ForumPosts_ThreadId_CreatedAtUtc");
+
+                    b.HasIndex("ThreadId", "ReplyToPostId");
+
+                    b.ToTable("ForumPosts", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_ForumPosts_EditedHasTimestamp", "[Status] <> 'Edited' OR [EditedAtUtc] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_ForumPosts_NoSelfReply", "[ReplyToPostId] IS NULL OR [ReplyToPostId] <> [Id]");
+
+                            t.HasCheckConstraint("CK_ForumPosts_RemovedIsTombstoned", "[Status] <> 'Removed' OR ([RemovedAtUtc] IS NOT NULL AND LEN([Body]) = 0)");
+
+                            t.HasCheckConstraint("CK_ForumPosts_Status", "[Status] IN ('Published', 'Edited', 'Removed')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumPostReaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReactionType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("PostId", "UserId", "ReactionType")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ForumPostReactions_PostId_UserId_ReactionType");
+
+                    b.ToTable("ForumPostReactions", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_ForumPostReactions_ReactionType", "[ReactionType] IN ('Like')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumSubscription", b =>
+                {
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("NotificationPreference")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("ThreadId", "UserId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_ForumSubscriptions_UserId");
+
+                    b.ToTable("ForumSubscriptions", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_ForumSubscriptions_NotificationPreference", "[NotificationPreference] IN ('AllReplies', 'None')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CourseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("LastActivityAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("IX_ForumThreads_AuthorUserId");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_ForumThreads_Status");
+
+                    b.HasIndex("CategoryId", "IsPinned", "LastActivityAtUtc")
+                        .HasDatabaseName("IX_ForumThreads_CategoryId_IsPinned_LastActivityAtUtc");
+
+                    b.ToTable("ForumThreads", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_ForumThreads_Status", "[Status] IN ('Open', 'Locked', 'Archived', 'Removed')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.FriendRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("RequestedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RespondedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid>("UserHighId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserLowId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserHighId", "Status")
+                        .HasDatabaseName("IX_FriendRequests_UserHighId_Status");
+
+                    b.HasIndex("UserLowId", "Status")
+                        .HasDatabaseName("IX_FriendRequests_UserLowId_Status");
+
+                    b.HasIndex("UserLowId", "UserHighId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_FriendRequests_Pair_Pending")
+                        .HasFilter("[Status] = 'Pending'");
+
+                    b.ToTable("FriendRequests", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_FriendRequests_CanonicalPair", "CONVERT(char(36), [UserLowId]) < CONVERT(char(36), [UserHighId])");
+
+                            t.HasCheckConstraint("CK_FriendRequests_RequesterIsParticipant", "[RequestedByUserId] = [UserLowId] OR [RequestedByUserId] = [UserHighId]");
+
+                            t.HasCheckConstraint("CK_FriendRequests_RespondedWhenResolved", "[Status] = 'Pending' OR [RespondedAtUtc] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_FriendRequests_Status", "[Status] IN ('Pending', 'Accepted', 'Declined', 'Cancelled')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.Friendship", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("AcceptedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid>("UserHighId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserLowId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserHighId")
+                        .HasDatabaseName("IX_Friendships_UserHighId");
+
+                    b.HasIndex("UserLowId", "UserHighId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Friendships_Pair");
+
+                    b.ToTable("Friendships", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_Friendships_CanonicalPair", "CONVERT(char(36), [UserLowId]) < CONVERT(char(36), [UserHighId])");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset?>("ReadAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("RecipientUserId")
+                        .HasDatabaseName("IX_Notifications_RecipientUserId_Unread")
+                        .HasFilter("[ReadAtUtc] IS NULL");
+
+                    b.HasIndex("RecipientUserId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_Notifications_RecipientUserId_CreatedAtUtc");
+
+                    b.ToTable("Notifications", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_Notifications_Kind", "[Kind] IN ('FriendRequest', 'FriendAccepted', 'ThreadReply', 'PostReaction', 'DirectMessage', 'Moderation')");
+
+                            t.HasCheckConstraint("CK_Notifications_NoSelfNotification", "[ActorUserId] IS NULL OR [ActorUserId] <> [RecipientUserId]");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.Report", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTimeOffset?>("HandledAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid?>("HandledByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid>("ReporterUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HandledByUserId");
+
+                    b.HasIndex("Status", "CreatedAtUtc")
+                        .HasDatabaseName("IX_Reports_Status_CreatedAtUtc");
+
+                    b.HasIndex("TargetType", "TargetId")
+                        .HasDatabaseName("IX_Reports_TargetType_TargetId");
+
+                    b.HasIndex("ReporterUserId", "TargetType", "TargetId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Reports_Reporter_Target_Open")
+                        .HasFilter("[Status] IN ('Open', 'Reviewing')");
+
+                    b.ToTable("Reports", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_Reports_HandledWhenClosed", "[Status] IN ('Open', 'Reviewing') OR ([HandledByUserId] IS NOT NULL AND [HandledAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Reports_ReasonCode", "[ReasonCode] IN ('Spam', 'Harassment', 'Hate', 'SexualContent', 'Violence', 'Impersonation', 'Privacy', 'Other')");
+
+                            t.HasCheckConstraint("CK_Reports_Status", "[Status] IN ('Open', 'Reviewing', 'Resolved', 'Dismissed')");
+
+                            t.HasCheckConstraint("CK_Reports_TargetType", "[TargetType] IN ('Profile', 'Thread', 'Post', 'Message')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.UserBlock", b =>
+                {
+                    b.Property<Guid>("BlockerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BlockedUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("ReasonCategory")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.HasKey("BlockerUserId", "BlockedUserId");
+
+                    b.HasIndex("BlockedUserId")
+                        .HasDatabaseName("IX_UserBlocks_BlockedUserId");
+
+                    b.ToTable("UserBlocks", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_UserBlocks_NoSelfBlock", "[BlockerUserId] <> [BlockedUserId]");
+
+                            t.HasCheckConstraint("CK_UserBlocks_ReasonCategory", "[ReasonCategory] IN ('Unspecified', 'Harassment', 'Spam', 'Personal')");
+                        });
+                });
+
             modelBuilder.Entity("DanielsDojo.Domain.Identity.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1775,6 +2500,264 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DanielsDojo.Domain.Community.CommunityProfile", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "User")
+                        .WithOne()
+                        .HasForeignKey("DanielsDojo.Domain.Community.CommunityProfile", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ConversationReadState", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Community.DirectConversation", "Conversation")
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Community.DirectMessage", null)
+                        .WithMany()
+                        .HasForeignKey("LastReadMessageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.DirectConversation", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "UserHigh")
+                        .WithMany()
+                        .HasForeignKey("UserHighId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "UserLow")
+                        .WithMany()
+                        .HasForeignKey("UserLowId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserHigh");
+
+                    b.Navigation("UserLow");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.DirectMessage", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Community.DirectConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumPost", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Community.ForumThread", "Thread")
+                        .WithMany("Posts")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Community.ForumPost", "ReplyToPost")
+                        .WithMany()
+                        .HasForeignKey("ThreadId", "ReplyToPostId")
+                        .HasPrincipalKey("ThreadId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_ForumPosts_ReplyToPost_SameThread");
+
+                    b.Navigation("Author");
+
+                    b.Navigation("ReplyToPost");
+
+                    b.Navigation("Thread");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumPostReaction", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Community.ForumPost", "Post")
+                        .WithMany("Reactions")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumSubscription", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Community.ForumThread", "Thread")
+                        .WithMany()
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Thread");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumThread", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Community.ForumCategory", "Category")
+                        .WithMany("Threads")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Catalog.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.FriendRequest", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "UserHigh")
+                        .WithMany()
+                        .HasForeignKey("UserHighId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "UserLow")
+                        .WithMany()
+                        .HasForeignKey("UserLowId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserHigh");
+
+                    b.Navigation("UserLow");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.Friendship", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "UserHigh")
+                        .WithMany()
+                        .HasForeignKey("UserHighId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "UserLow")
+                        .WithMany()
+                        .HasForeignKey("UserLowId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserHigh");
+
+                    b.Navigation("UserLow");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.Notification", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "Recipient")
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Actor");
+
+                    b.Navigation("Recipient");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.Report", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "HandledByUser")
+                        .WithMany()
+                        .HasForeignKey("HandledByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("HandledByUser");
+
+                    b.Navigation("Reporter");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.UserBlock", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "Blocked")
+                        .WithMany()
+                        .HasForeignKey("BlockedUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "Blocker")
+                        .WithMany()
+                        .HasForeignKey("BlockerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Blocked");
+
+                    b.Navigation("Blocker");
+                });
+
             modelBuilder.Entity("DanielsDojo.Domain.Identity.UserRole", b =>
                 {
                     b.HasOne("DanielsDojo.Domain.Identity.User", "AssignedByUser")
@@ -1875,6 +2858,26 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("DanielsDojo.Domain.Commerce.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.DirectConversation", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumCategory", b =>
+                {
+                    b.Navigation("Threads");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumPost", b =>
+                {
+                    b.Navigation("Reactions");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ForumThread", b =>
+                {
+                    b.Navigation("Posts");
                 });
 
             modelBuilder.Entity("DanielsDojo.Domain.Identity.Role", b =>

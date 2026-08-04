@@ -1,4 +1,6 @@
+using DanielsDojo.Application.Catalog;
 using DanielsDojo.Application.Identity;
+using DanielsDojo.Infrastructure.Catalog;
 using DanielsDojo.Infrastructure.Identity;
 using DanielsDojo.Infrastructure.Persistence;
 using DanielsDojo.Infrastructure.Persistence.Seeding;
@@ -51,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<DatabaseSeeder>();
         services.AddScoped<IUserProvisioningService, UserProvisioningService>();
         services.AddScoped<AdminRoleGrantService>();
+        services.AddScoped<IPublicCatalogQueries, PublicCatalogQueries>();
 
         return services;
     }

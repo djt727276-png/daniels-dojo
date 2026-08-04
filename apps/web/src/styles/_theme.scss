@@ -1,0 +1,79 @@
+/* -------------------------------------------------------------------------
+   Daniel's Dojo — Angular Material 3 theme.
+
+   Uses the official `mat.theme` system API from the installed Angular Material
+   22.1.0 release. Azure is the closest built-in palette to the deep
+   navy/indigo brand primary and violet matches the restrained tertiary; the
+   handful of role variables the brand needs beyond those palettes are pinned
+   afterwards with `mat.theme-overrides`, which is the supported way to adjust
+   system tokens without forking the palette.
+
+   Warm amber is deliberately NOT wired into the Material palette: it is
+   reserved for achievement/progress accents so it keeps its meaning.
+   ------------------------------------------------------------------------- */
+
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$violet-palette,
+      ),
+      // System font stack — no web font is downloaded, so typography never
+      // depends on a network request.
+      typography: (
+          plain-family: (
+            system-ui,
+            -apple-system,
+            'Segoe UI',
+            roboto,
+            helvetica,
+            arial,
+            sans-serif,
+          ),
+          brand-family: (
+            system-ui,
+            -apple-system,
+            'Segoe UI',
+            roboto,
+            helvetica,
+            arial,
+            sans-serif,
+          ),
+          bold-weight: 700,
+          medium-weight: 500,
+          regular-weight: 400,
+        ),
+      density: 0,
+    )
+  );
+
+  /* Align Material's system colours with the brand tokens so Material
+     components and hand-built components cannot drift apart. */
+  @include mat.theme-overrides(
+    (
+      primary: var(--dd-primary),
+      on-primary: var(--dd-on-primary),
+      primary-container: var(--dd-primary-container),
+      on-primary-container: var(--dd-on-primary-container),
+      tertiary: var(--dd-tertiary),
+      on-tertiary: var(--dd-on-tertiary),
+      tertiary-container: var(--dd-tertiary-container),
+      on-tertiary-container: var(--dd-on-tertiary-container),
+      surface: var(--dd-surface),
+      on-surface: var(--dd-on-surface),
+      surface-variant: var(--dd-surface-variant),
+      on-surface-variant: var(--dd-on-surface-variant),
+      background: var(--dd-background),
+      on-background: var(--dd-on-surface),
+      outline: var(--dd-outline),
+      outline-variant: var(--dd-outline-strong),
+      error: var(--dd-danger),
+      error-container: var(--dd-danger-container),
+    )
+  );
+}
