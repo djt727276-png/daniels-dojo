@@ -15,6 +15,13 @@
     <!-- API: development-only OpenAPI document generation (.NET 10 built-in). -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <!--
+      Operational telemetry: requests, dependencies, exceptions, and W3C correlation into
+      Application Insights. Activates only when APPLICATIONINSIGHTS_CONNECTION_STRING is
+      present (the deployed environments); locally it is a no-op. The audit trail's
+      correlation id is the same W3C activity id, so database audit rows join to traces.
+    -->
+    <PackageVersion Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.23.0" />
+    <!--
       Transitive pin (CentralPackageTransitivePinningEnabled). Microsoft.AspNetCore.OpenApi
       still resolves Microsoft.OpenApi 2.0.0, which carries GHSA-v5pm-xwqc-g5wc (high).
       2.7.5 is the first patched release. Remove this pin once the framework package

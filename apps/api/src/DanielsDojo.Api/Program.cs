@@ -34,6 +34,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks().AddDatabaseReadinessCheck();
 builder.Services.AddOpenApi();
 
+// Operational telemetry: requests, dependencies, exceptions, and W3C correlation. Active
+// only where APPLICATIONINSIGHTS_CONNECTION_STRING is configured (the deployed
+// environments); locally this registers and stays silent. The audit trail records the same
+// W3C activity id, so a database audit row joins to its trace in the portal.
+builder.Services.AddApplicationInsightsTelemetry();
+
 // Persistence. Registration opens no connection and never migrates or seeds.
 builder.Services.AddInfrastructure(builder.Configuration);
 

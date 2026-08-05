@@ -79,6 +79,181 @@ resource insights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
+// Who is told when an alert fires. Reuses the budget email: one operator, one inbox.
+resource alertActionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
+  name: '${prefix}-alerts'
+  location: 'global'
+  properties: {
+    groupShortName: 'dd-${environmentName}'
+    enabled: true
+    emailReceivers: [
+      {
+        name: 'operator'
+        emailAddress: budgetAlertEmail
+        useCommonAlertSchema: true
+      }
+    ]
+  }
+}
+
+// Sustained server failures. Averaged over 15 minutes so one flaky request stays quiet
+// while a genuinely broken deployment cannot.
+resource failedRequestsAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${prefix}-failed-requests'
+  location: 'global'
+  properties: {
+    description: 'The API is returning failed requests at a rate that means customers are affected.'
+    severity: 2
+    enabled: true
+    scopes: [insights.id]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          criterionType: 'StaticThresholdCriterion'
+          name: 'FailedRequests'
+          metricName: 'requests/failed'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 10
+        }
+      ]
+    }
+    actions: [{ actionGroupId: alertActionGroup.id }]
+  }
+}
+
+// Sustained slowness: p-average server response time over 15 minutes.
+resource slowResponseAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${prefix}-slow-responses'
+  location: 'global'
+  properties: {
+    description: 'The API is answering slowly enough that pages feel broken.'
+    severity: 3
+    enabled: true
+    scopes: [insights.id]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          criterionType: 'StaticThresholdCriterion'
+          name: 'SlowResponses'
+          metricName: 'requests/duration'
+          timeAggregation: 'Average'
+          operator: 'GreaterThan'
+          threshold: 3000
+        }
+      ]
+    }
+    actions: [{ actionGroupId: alertActionGroup.id }]
+  }
+}
+
+// Unhandled exceptions reaching the pipeline, which the API's problem-details layer
+// should normally prevent — any sustained count means something new is broken.
+resource exceptionsAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${prefix}-server-exceptions'
+  location: 'global'
+  properties: {
+    description: 'Unhandled server exceptions are being recorded.'
+    severity: 2
+    enabled: true
+    scopes: [insights.id]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          criterionType: 'StaticThresholdCriterion'
+          name: 'Exceptions'
+          metricName: 'exceptions/server'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 5
+        }
+      ]
+    }
+    actions: [{ actionGroupId: alertActionGroup.id }]
+  }
+}
+
+// The operator's one-page view: traffic, failures, latency, dependencies, and the
+// slowest and most-failing operations. Queries only; no data leaves the workspace.
+resource operationsWorkbook 'Microsoft.Insights/workbooks@2023-06-01' = {
+  name: guid(resourceGroup().id, 'operations-workbook')
+  location: location
+  kind: 'shared'
+  properties: {
+    displayName: 'Daniel\'s Dojo — Operations (${environmentName})'
+    category: 'workbook'
+    sourceId: insights.id
+    serializedData: string({
+      version: 'Notebook/1.0'
+      items: [
+        {
+          type: 1
+          content: {
+            json: '## Daniel\'s Dojo — API operations\nRequests, failures, latency, and dependencies for the ${environmentName} environment. Audit rows in the database carry the same W3C operation id as these traces.'
+          }
+        }
+        {
+          type: 3
+          content: {
+            version: 'KqlItem/1.0'
+            query: 'requests | summarize Requests = count(), Failed = countif(success == false), P95ms = percentile(duration, 95) by bin(timestamp, 15m) | order by timestamp asc'
+            size: 0
+            timeContext: { durationMs: 86400000 }
+            queryType: 0
+            resourceType: 'microsoft.insights/components'
+            visualization: 'timechart'
+          }
+        }
+        {
+          type: 3
+          content: {
+            version: 'KqlItem/1.0'
+            query: 'requests | summarize Count = count(), Failed = countif(success == false), AvgMs = avg(duration), P95ms = percentile(duration, 95) by name | order by Failed desc, P95ms desc | take 20'
+            size: 0
+            timeContext: { durationMs: 86400000 }
+            queryType: 0
+            resourceType: 'microsoft.insights/components'
+            visualization: 'table'
+          }
+        }
+        {
+          type: 3
+          content: {
+            version: 'KqlItem/1.0'
+            query: 'dependencies | summarize Count = count(), Failed = countif(success == false), AvgMs = avg(duration) by type, target | order by Failed desc, AvgMs desc | take 20'
+            size: 0
+            timeContext: { durationMs: 86400000 }
+            queryType: 0
+            resourceType: 'microsoft.insights/components'
+            visualization: 'table'
+          }
+        }
+        {
+          type: 3
+          content: {
+            version: 'KqlItem/1.0'
+            query: 'exceptions | summarize Count = count() by problemId, outerMessage | order by Count desc | take 20'
+            size: 0
+            timeContext: { durationMs: 86400000 }
+            queryType: 0
+            resourceType: 'microsoft.insights/components'
+            visualization: 'table'
+          }
+        }
+      ]
+    })
+  }
+}
+
 // ------------------------------------------------------------------ sql
 
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
