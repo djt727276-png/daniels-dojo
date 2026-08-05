@@ -332,6 +332,65 @@ public sealed class CheckoutTests(SqlServerDatabaseFixture fixture) : IAsyncLife
         Assert.False(curriculum.RootElement.GetProperty("accessGranted").GetBoolean());
     }
 
+    // ------------------------------------------------------- public storefront path
+
+    [Fact]
+    public async Task TheOfferIdOnThePublicPageLeadsAllTheWayToAccess()
+    {
+        // The public course page carries the offer identifier a buy button needs…
+        using HttpClient anonymous = _harness.Factory.CreateClient();
+        Guid publicOfferId;
+
+        using (JsonDocument page = await anonymous.GetJsonAsync(
+            "/api/v1/catalog/courses/commerce-course"))
+        {
+            publicOfferId = page.RootElement
+                .GetProperty("lifetimePrice").GetProperty("offerId").GetGuid();
+        }
+
+        Assert.Equal(_lifetimeOfferId, publicOfferId);
+
+        // …and the membership price is published on its own endpoint for the pricing page.
+        // (Which membership offer is "current" when several exist is the resolver's own
+        // concern; the pricing page only needs a purchasable identifier and real amount.)
+        using (JsonDocument membership = await anonymous.GetJsonAsync("/api/v1/catalog/membership"))
+        {
+            Assert.NotEqual(Guid.Empty, membership.RootElement.GetProperty("offerId").GetGuid());
+            Assert.True(membership.RootElement.GetProperty("amountMinor").GetInt64() > 0);
+        }
+
+        // Checkout starts from exactly that public identifier.
+        using HttpClient customer = _harness.CreateClient(_customer);
+        using JsonDocument started = await customer.SendJsonAsync(
+            HttpMethod.Post,
+            "/api/v1/billing/checkout",
+            new { offerId = publicOfferId },
+            HttpStatusCode.OK);
+
+        string sessionId = await SessionIdAsync();
+
+        // The deterministic "pay" happens over HTTP, exactly as the stand-in page does it.
+        using (JsonDocument _ = await customer.SendJsonAsync(
+            HttpMethod.Post,
+            $"/api/v1/billing/deterministic/{sessionId}/pay",
+            null,
+            HttpStatusCode.NoContent))
+        {
+        }
+
+        using JsonDocument confirmed = await customer.SendJsonAsync(
+            HttpMethod.Post,
+            $"/api/v1/billing/checkout/{sessionId}/confirm",
+            null,
+            HttpStatusCode.OK);
+
+        Assert.True(confirmed.RootElement.GetProperty("entitlementGranted").GetBoolean());
+
+        using JsonDocument curriculum = await customer.GetJsonAsync(
+            "/api/v1/learning/courses/commerce-course");
+        Assert.True(curriculum.RootElement.GetProperty("accessGranted").GetBoolean());
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private DeterministicPaymentProvider Provider() =>

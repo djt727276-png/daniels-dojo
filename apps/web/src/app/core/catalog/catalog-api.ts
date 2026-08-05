@@ -9,6 +9,7 @@ import {
   CourseDetail,
   LessonPreview,
   PagedResult,
+  PublicPrice,
 } from './catalog.model';
 
 /** Typed client for the anonymous catalog endpoints. */
@@ -50,6 +51,11 @@ export class CatalogApi {
     return this.http.get<CourseDetail>(
       `${this.basePath}/v1/catalog/courses/${encodeURIComponent(slug)}`,
     );
+  }
+
+  /** The live membership price. A 404 means none is published, which the UI says honestly. */
+  getMembershipPrice(): Observable<PublicPrice> {
+    return this.http.get<PublicPrice>(`${this.basePath}/v1/catalog/membership`);
   }
 
   /** Fetches a preview lesson's plain-text body. */

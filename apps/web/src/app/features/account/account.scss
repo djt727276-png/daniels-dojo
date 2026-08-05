@@ -135,6 +135,24 @@
   clip-path: inset(50%);
 }
 
+.account__orders {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--dd-text-sm);
+
+  th,
+  td {
+    padding: var(--dd-space-2) var(--dd-space-3);
+    text-align: left;
+    border-bottom: 1px solid var(--dd-outline);
+  }
+
+  th {
+    font-weight: var(--dd-weight-medium);
+    color: var(--dd-on-surface-variant);
+  }
+}
+
 .account__data-actions {
   display: flex;
   flex-wrap: wrap;

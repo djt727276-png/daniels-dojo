@@ -260,6 +260,10 @@ public sealed partial class PublicCatalogQueries(
             .ToDictionary(group => group.Key, group => group.Select(row => row.Name).ToList());
     }
 
+    /// <inheritdoc />
+    public Task<PublicPrice?> GetMembershipPriceAsync(CancellationToken cancellationToken = default) =>
+        ResolveMembershipPriceAsync(cancellationToken);
+
     /// <summary>
     /// Resolves the single current membership price.
     /// </summary>
@@ -281,6 +285,7 @@ public sealed partial class PublicCatalogQueries(
             .ThenByDescending(pair => pair.Price.Id)
             .Select(pair => new PriceRow(
                 pair.Price.Id,
+                pair.Offer.Id,
                 pair.Offer.CourseId,
                 pair.Price.AmountMinor,
                 pair.Price.Currency,
@@ -320,6 +325,7 @@ public sealed partial class PublicCatalogQueries(
                 && courseIds.Contains(pair.Offer.CourseId!.Value))
             .Select(pair => new PriceRow(
                 pair.Price.Id,
+                pair.Offer.Id,
                 pair.Offer.CourseId,
                 pair.Price.AmountMinor,
                 pair.Price.Currency,
@@ -372,6 +378,7 @@ public sealed partial class PublicCatalogQueries(
     /// <summary>Flat projection so no entity is materialised for pricing.</summary>
     private sealed record PriceRow(
         Guid PriceId,
+        Guid OfferId,
         Guid? CourseId,
         long AmountMinor,
         string Currency,
@@ -379,7 +386,7 @@ public sealed partial class PublicCatalogQueries(
         DateTimeOffset EffectiveFromUtc)
     {
         public PublicPrice ToPublicPrice() =>
-            new(AmountMinor, Currency, BillingInterval.ToString());
+            new(OfferId, AmountMinor, Currency, BillingInterval.ToString());
     }
 
     // Logs the condition without exposing it publicly; the response stays deterministic.

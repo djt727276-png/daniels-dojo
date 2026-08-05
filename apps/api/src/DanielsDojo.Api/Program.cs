@@ -6,6 +6,7 @@ using DanielsDojo.Api.Common;
 using DanielsDojo.Api.Hosting;
 using DanielsDojo.Api.Learning;
 using DanielsDojo.Api.Media;
+using DanielsDojo.Api.Privacy;
 using DanielsDojo.Application.Common;
 using DanielsDojo.Application.Identity;
 using DanielsDojo.Application.System;
@@ -120,6 +121,9 @@ if (DevelopmentAuthOptions.IsExactlyDevelopment(app.Environment)
 // every other mode the route does not exist rather than merely refusing.
 app.MapDeterministicMediaSink();
 
+// Stand-in "pay" action for the deterministic payment provider, under the same rule.
+app.MapDeterministicCheckout();
+
 // The live channel. Receive-only; content still flows through audited REST.
 app.MapHub<DanielsDojo.Api.Community.CommunityHub>("/hubs/community");
 
@@ -156,6 +160,9 @@ apiV1.MapMediaWebhookEndpoints();
 apiV1.MapForumEndpoints();
 apiV1.MapSocialEndpoints();
 apiV1.MapModerationEndpoints();
+
+// The member's rights over their own data: export and deletion.
+apiV1.MapPrivacyEndpoints();
 
 // Authenticated session view. Every value comes from the local user record resolved by the
 // provisioning middleware, never from the token.

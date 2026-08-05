@@ -49,10 +49,15 @@ public sealed record CourseListQuery(
 /// A price as the public API presents it: integer minor units plus currency and interval, so
 /// no amount is ever hard-coded in a client.
 /// </summary>
+/// <param name="OfferId">
+/// The purchasable offer this price belongs to — what checkout is started with. An
+/// identifier, not a secret: exposing it is what makes the buy button possible, and the
+/// checkout service re-validates the offer's availability on every start.
+/// </param>
 /// <param name="AmountMinor">Amount in minor units.</param>
 /// <param name="Currency">Uppercase ISO-4217 code.</param>
 /// <param name="Interval">Billing interval name.</param>
-public sealed record PublicPrice(long AmountMinor, string Currency, string Interval);
+public sealed record PublicPrice(Guid OfferId, long AmountMinor, string Currency, string Interval);
 
 /// <summary>Card-level course summary for the catalog list.</summary>
 public sealed record CourseCard(

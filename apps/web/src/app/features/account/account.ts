@@ -9,8 +9,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 
+import { DatePipe } from '@angular/common';
+
 import { toApiFailure } from '../../core/api/problem-details';
 import { AuthService } from '../../core/auth/auth.service';
+import { BillingApi, BillingOverview } from '../../core/commerce/billing-api';
 import {
   FriendRequestPolicy,
   MemberApi,
@@ -31,6 +34,7 @@ import { ConfirmDialog, ConfirmDialogResult } from '../../shared/ui/confirm-dial
 @Component({
   selector: 'app-account',
   imports: [
+    DatePipe,
     ReactiveFormsModule,
     RouterLink,
     MatCardModule,
@@ -47,6 +51,7 @@ import { ConfirmDialog, ConfirmDialogResult } from '../../shared/ui/confirm-dial
 export class Account {
   private readonly auth = inject(AuthService);
   private readonly members = inject(MemberApi);
+  private readonly billingApi = inject(BillingApi);
   private readonly dialog = inject(MatDialog);
 
   protected readonly state = this.auth.sessionState;
@@ -64,6 +69,9 @@ export class Account {
   protected readonly avatarVersion = signal(0);
   protected readonly busyWithData = signal(false);
   protected readonly privacyDataError = signal<string | null>(null);
+  protected readonly billing = signal<BillingOverview | null>(null);
+  protected readonly billingError = signal<string | null>(null);
+  protected readonly openingPortal = signal(false);
 
   protected readonly privacyForm = new FormGroup({
     bio: new FormControl('', { nonNullable: true }),
@@ -74,6 +82,38 @@ export class Account {
 
   constructor() {
     this.loadProfile();
+    this.loadBilling();
+  }
+
+  /** Loads the commerce standing. A failure hides the card rather than breaking the page. */
+  protected loadBilling(): void {
+    this.billingApi.getOverview().subscribe({
+      next: (overview) => this.billing.set(overview),
+      error: () => this.billing.set(null),
+    });
+  }
+
+  /** Opens the hosted billing portal — Stripe's, or the deterministic stand-in's return. */
+  protected openPortal(): void {
+    this.openingPortal.set(true);
+    this.billingError.set(null);
+
+    this.billingApi.startPortal().subscribe({
+      next: (portal) => window.location.assign(portal.portalUrl),
+      error: (error: unknown) => {
+        this.openingPortal.set(false);
+        this.billingError.set(
+          toApiFailure(error, 'The billing portal could not be opened just now.').message,
+        );
+      },
+    });
+  }
+
+  /** Formats minor units with the currency the API returned. */
+  protected money(totalMinor: number, currency: string): string {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(
+      totalMinor / 100,
+    );
   }
 
   protected createAccount(): void {

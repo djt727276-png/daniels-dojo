@@ -176,6 +176,76 @@
           }
         }
 
+        <!-- Commerce standing: verified provider state, plus the portal for changes. -->
+        @if (billing(); as commerce) {
+          <mat-card appearance="outlined" class="account__card">
+            <mat-card-content class="dd-stack">
+              <h2 class="account__heading">Billing</h2>
+
+              @if (billingError(); as message) {
+                <p class="account__notice" role="alert" data-testid="billing-error">
+                  {{ message }}
+                </p>
+              }
+
+              @if (commerce.membership; as membership) {
+                <p data-testid="membership-summary">
+                  Membership: <strong>{{ membership.status }}</strong>
+                  @if (membership.cancelAtPeriodEnd) {
+                    — ends {{ membership.currentPeriodEndUtc | date: 'mediumDate' }}
+                  } @else {
+                    — renews {{ membership.currentPeriodEndUtc | date: 'mediumDate' }}
+                  }
+                </p>
+              } @else {
+                <p class="account__hint" data-testid="no-membership">
+                  No active membership. Courses can also be bought individually.
+                </p>
+              }
+
+              @if (commerce.orders.length > 0) {
+                <table class="account__orders" data-testid="order-history">
+                  <caption class="cdk-visually-hidden">
+                    Order history
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">What</th>
+                      <th scope="col">Total</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Paid</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (order of commerce.orders; track order.id) {
+                      <tr>
+                        <td>{{ order.offerName }}</td>
+                        <td>{{ money(order.totalMinor, order.currency) }}</td>
+                        <td>{{ order.status }}</td>
+                        <td>
+                          {{ order.paidAtUtc ? (order.paidAtUtc | date: 'mediumDate') : '—' }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+
+              <div>
+                <button
+                  matButton="outlined"
+                  type="button"
+                  [disabled]="openingPortal()"
+                  (click)="openPortal()"
+                  data-testid="open-portal"
+                >
+                  Manage billing
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+
         <!--
           The member's rights over their data. Export downloads everything; deletion is the
           documented lifecycle and requires typing the phrase, not just clicking.

@@ -179,6 +179,20 @@ export const routes: Routes = [
     title: "Community — Daniel's Dojo",
   },
   {
+    // The deterministic provider's stand-in checkout. In Stripe mode this route is never
+    // reached because the checkout URL points at Stripe's own hosted page.
+    path: 'checkout/deterministic/:sessionId',
+    loadComponent: () =>
+      import('./features/commerce/deterministic-checkout').then((m) => m.DeterministicCheckout),
+    canActivate: [authenticatedGuard],
+    title: "Checkout — Daniel's Dojo",
+  },
+  {
+    // Where the deterministic portal stand-in returns; the account page is the portal here.
+    path: 'account/deterministic-portal',
+    redirectTo: 'account',
+  },
+  {
     path: 'community/search',
     loadComponent: () =>
       import('./features/community/community-search').then((m) => m.CommunitySearch),

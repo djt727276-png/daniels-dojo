@@ -2,9 +2,10 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { toApiFailure } from '../../core/api/problem-details';
+import { BillingApi } from '../../core/commerce/billing-api';
 import { LearningApi, MyLearningCourse } from '../../core/learning/learning-api';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
@@ -39,6 +40,10 @@ type LearningState =
         title="My Learning"
         description="Courses you hold, with your progress. Pick up where you left off."
       />
+
+      @if (checkoutNote(); as note) {
+        <p class="learning__checkout" role="status" data-testid="checkout-note">{{ note }}</p>
+      }
 
       @switch (state().kind) {
         @case ('loading') {
@@ -133,12 +138,23 @@ type LearningState =
       font-size: var(--dd-text-sm);
       color: var(--dd-on-surface-variant);
     }
+
+    .learning__checkout {
+      padding: var(--dd-space-3) var(--dd-space-4);
+      background: var(--dd-success-container);
+      color: var(--dd-success);
+      border-radius: var(--dd-radius-md);
+    }
   `,
 })
 export class MyLearning {
   private readonly api = inject(LearningApi);
+  private readonly billing = inject(BillingApi);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly state = signal<LearningState>({ kind: 'loading' });
+  protected readonly checkoutNote = signal<string | null>(null);
 
   protected readonly courses = computed(() => {
     const current = this.state();
@@ -152,6 +168,42 @@ export class MyLearning {
 
   constructor() {
     this.load();
+    this.confirmReturnedCheckout();
+  }
+
+  /**
+   * The browser lands here after paying. The session identifier is a lookup key, not
+   * proof: the server re-reads the session from the provider before granting anything,
+   * and a "not paid yet" answer is shown honestly rather than pretending.
+   */
+  private confirmReturnedCheckout(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const sessionId = params.get('session_id');
+
+    if (params.get('checkout') !== 'success' || !sessionId) {
+      return;
+    }
+
+    // Drop the parameters so a refresh does not re-confirm.
+    void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+
+    this.billing.confirmCheckout(sessionId).subscribe({
+      next: (result) => {
+        this.checkoutNote.set(
+          result.confirmed
+            ? 'Thank you! Your purchase is confirmed and your access is ready.'
+            : 'Your payment has not completed yet. Access appears as soon as it does.',
+        );
+
+        if (result.entitlementGranted) {
+          this.load();
+        }
+      },
+      error: (error: unknown) =>
+        this.checkoutNote.set(
+          toApiFailure(error, 'We could not confirm the purchase just now.').message,
+        ),
+    });
   }
 
   protected load(): void {

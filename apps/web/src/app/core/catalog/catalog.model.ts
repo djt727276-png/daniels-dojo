@@ -12,6 +12,7 @@ export interface PagedResult<T> {
  * The amount is never hard-coded in the client — see `formatPrice`.
  */
 export interface PublicPrice {
+  readonly offerId: string;
   readonly amountMinor: number;
   readonly currency: string;
   readonly interval: string;
