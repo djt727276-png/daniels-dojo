@@ -77,6 +77,9 @@ export function provideAuth(): (Provider | EnvironmentProviders)[] {
       }
 
       if (!isEntraConfigured(config)) {
+        // Nothing can sign in, but the session question must still settle — guards wait
+        // for the first non-loading state before deciding.
+        auth.markSignedOut();
         return;
       }
 

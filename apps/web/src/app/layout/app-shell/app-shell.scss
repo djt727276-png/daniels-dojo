@@ -32,7 +32,15 @@
 }
 
 .app-toolbar__account {
+  flex: 0 1 auto;
+  min-width: 0;
   color: inherit;
+}
+
+/* The truncation lives on an inner span because Material's own button label wrapper
+   does not shrink — without this the name pushes the theme toggle off a phone screen. */
+.app-toolbar__account-name {
+  display: block;
   max-width: 12rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -104,8 +112,8 @@
 }
 
 @media (max-width: tokens.$breakpoint-md) {
-  .app-toolbar__account {
-    max-width: 7rem;
+  .app-toolbar__account-name {
+    max-width: 6.5rem;
   }
 }
 

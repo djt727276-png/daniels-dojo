@@ -60,3 +60,7 @@ secrets.json
 # Docker / misc
 # ---------------------------------------------------------------------------
 *.pid
+
+# Playwright run artifacts and visual-QA captures (regenerated every run)
+apps/web/e2e/.artifacts/
+apps/web/e2e/screenshots/

@@ -13,7 +13,9 @@
     "test:ci": "ng test --no-watch",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "e2e": "playwright test e2e/platform.spec.ts",
+    "e2e:visual": "playwright test e2e/visual.spec.ts"
   },
   "dependencies": {
     "@angular/cdk": "^22.1.0",
@@ -35,6 +37,7 @@
     "@angular/cli": "^22.1.2",
     "@angular/compiler-cli": "^22.1.0",
     "@eslint/js": "^10.0.0",
+    "@playwright/test": "^1.62.1",
     "angular-eslint": "^22.1.0",
     "eslint": "^10.0.0",
     "jsdom": "^28.0.0",
