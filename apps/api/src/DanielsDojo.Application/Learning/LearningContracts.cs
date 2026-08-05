@@ -166,3 +166,39 @@ public sealed record ProgressRecorded(
     bool CourseCompleted,
     int CompletedLessons,
     int TotalLessons);
+
+/// <summary>One certificate as its holder sees it.</summary>
+/// <param name="Id">Certificate identifier.</param>
+/// <param name="CourseId">The completed course.</param>
+/// <param name="CourseTitle">Course title captured at issuance.</param>
+/// <param name="HolderName">Holder name captured at issuance.</param>
+/// <param name="VerificationCode">Public code printed on the certificate.</param>
+/// <param name="IssuedAtUtc">When it was earned.</param>
+/// <param name="IsValid">False once revoked.</param>
+public sealed record CertificateView(
+    Guid Id,
+    Guid CourseId,
+    string CourseTitle,
+    string HolderName,
+    string VerificationCode,
+    DateTimeOffset IssuedAtUtc,
+    bool IsValid);
+
+/// <summary>
+/// What anyone may learn from a verification code.
+/// </summary>
+/// <remarks>
+/// Deliberately only what a certificate itself displays: the holder's name as issued, the
+/// course, the date, and validity. No account identifiers, no email, no progress detail.
+/// </remarks>
+/// <param name="CourseTitle">Course title at issuance.</param>
+/// <param name="HolderName">Holder name at issuance.</param>
+/// <param name="IssuedAtUtc">When it was earned.</param>
+/// <param name="IsValid">Whether it currently verifies.</param>
+/// <param name="RevokedAtUtc">When it stopped verifying, when it did.</param>
+public sealed record CertificateVerification(
+    string CourseTitle,
+    string HolderName,
+    DateTimeOffset IssuedAtUtc,
+    bool IsValid,
+    DateTimeOffset? RevokedAtUtc);

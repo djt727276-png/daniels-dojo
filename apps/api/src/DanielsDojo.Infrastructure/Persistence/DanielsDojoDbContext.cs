@@ -94,6 +94,9 @@ public sealed class DanielsDojoDbContext(DbContextOptions<DanielsDojoDbContext> 
     /// <summary>Per-lesson progress.</summary>
     public DbSet<LessonProgress> LessonProgress => Set<LessonProgress>();
 
+    /// <summary>Course-completion certificates.</summary>
+    public DbSet<Certificate> Certificates => Set<Certificate>();
+
     /// <summary>Community profiles.</summary>
     public DbSet<CommunityProfile> CommunityProfiles => Set<CommunityProfile>();
 

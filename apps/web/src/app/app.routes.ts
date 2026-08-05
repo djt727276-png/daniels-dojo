@@ -44,6 +44,20 @@ export const routes: Routes = [
     title: "My Learning — Daniel's Dojo",
   },
   {
+    path: 'certificates',
+    loadComponent: () =>
+      import('./features/certificates/certificates').then((m) => m.MyCertificates),
+    canActivate: [authenticatedGuard],
+    title: "Certificates — Daniel's Dojo",
+  },
+  {
+    // Public: anyone holding a printed code may verify it without an account.
+    path: 'verify/:code',
+    loadComponent: () =>
+      import('./features/certificates/certificates').then((m) => m.CertificateVerify),
+    title: "Verify certificate — Daniel's Dojo",
+  },
+  {
     path: 'learn/lessons/:lessonId',
     loadComponent: () => import('./features/my-learning/lesson-player').then((m) => m.LessonPlayer),
     canActivate: [authenticatedGuard],
@@ -94,8 +108,7 @@ export const routes: Routes = [
   },
   {
     path: 'legal/community-guidelines',
-    loadComponent: () =>
-      import('./features/public/legal-pages').then((m) => m.CommunityGuidelines),
+    loadComponent: () => import('./features/public/legal-pages').then((m) => m.CommunityGuidelines),
     title: "Community guidelines — Daniel's Dojo",
   },
   {

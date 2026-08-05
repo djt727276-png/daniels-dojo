@@ -40,4 +40,20 @@ public interface ILearningService
     Task<OperationResult<IReadOnlyList<MyLearningCourse>>> ListMyLearningAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>The learner's earned certificates.</summary>
+    Task<OperationResult<IReadOnlyList<CertificateView>>> ListCertificatesAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Public verification of a certificate code. Anonymous by design.</summary>
+    Task<OperationResult<CertificateVerification>> VerifyCertificateAsync(
+        string verificationCode,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Revokes a certificate. Admin only; a reason is mandatory.</summary>
+    Task<OperationResult<CertificateView>> RevokeCertificateAsync(
+        Guid certificateId,
+        string reason,
+        CancellationToken cancellationToken = default);
 }

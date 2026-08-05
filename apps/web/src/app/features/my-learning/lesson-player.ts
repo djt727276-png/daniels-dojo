@@ -66,8 +66,8 @@ class LessonPlaybackApi {
                       data-testid="player-frame"
                     >
                       <p class="player__placeholder">
-                        Playing <code>{{ grant.playbackId }}</code>
-                        — authorisation expires {{ grant.expiresAtUtc }}.
+                        Playing <code>{{ grant.playbackId }}</code> — authorisation expires
+                        {{ grant.expiresAtUtc }}.
                       </p>
                     </div>
                   } @else if (detail.isPlayable) {

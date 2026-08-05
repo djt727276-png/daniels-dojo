@@ -237,6 +237,13 @@ internal sealed class LearningService(
 
         (int total, int completed) = await CountsAsync(userId, course, cancellationToken);
 
+        // Completing the last published lesson earns the certificate, exactly once. Nothing
+        // else in the platform can create one.
+        if (total > 0 && completed >= total)
+        {
+            await IssueCertificateAsync(userId, course, now, cancellationToken);
+        }
+
         return OperationResult.FromValue(new ProgressRecorded(
             lessonId,
             entry.StartedAtUtc,
@@ -533,6 +540,160 @@ internal sealed class LearningService(
                 cancellationToken);
 
         return (total, completed);
+    }
+
+    /// <summary>
+    /// Issues the completion certificate if this member does not already hold one for the
+    /// course. Titles and names are captured at issuance so later edits never rewrite what
+    /// was earned.
+    /// </summary>
+    private async Task IssueCertificateAsync(
+        Guid userId,
+        Guid courseId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        bool exists = await context.Certificates
+            .AsNoTracking()
+            .AnyAsync(
+                certificate => certificate.UserId == userId && certificate.CourseId == courseId,
+                cancellationToken);
+
+        if (exists)
+        {
+            return;
+        }
+
+        var names = await context.Courses
+            .AsNoTracking()
+            .Where(course => course.Id == courseId)
+            .Select(course => new { course.Title })
+            .SingleAsync(cancellationToken);
+
+        string holder = await context.Users
+            .AsNoTracking()
+            .Where(user => user.Id == userId)
+            .Select(user => user.DisplayName)
+            .SingleAsync(cancellationToken);
+
+        context.Certificates.Add(new Certificate
+        {
+            Id = Guid.CreateVersion7(),
+            UserId = userId,
+            CourseId = courseId,
+
+            // 128 bits of randomness, base32-flavoured for print friendliness. Unguessable is
+            // the property that makes the public lookup safe.
+            VerificationCode = Convert.ToHexString(
+                System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)),
+            CourseTitleAtIssue = names.Title,
+            HolderNameAtIssue = holder,
+            IssuedAtUtc = now,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+        });
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // Two final-lesson completions raced; the unique (UserId, CourseId) index let one
+            // insert win, which is exactly the intended outcome.
+            context.ChangeTracker.Clear();
+        }
+    }
+
+    public async Task<OperationResult<IReadOnlyList<CertificateView>>> ListCertificatesAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        List<CertificateView> certificates = await context.Certificates
+            .AsNoTracking()
+            .Where(certificate => certificate.UserId == userId)
+            .OrderByDescending(certificate => certificate.IssuedAtUtc)
+            .Select(certificate => new CertificateView(
+                certificate.Id,
+                certificate.CourseId,
+                certificate.CourseTitleAtIssue,
+                certificate.HolderNameAtIssue,
+                certificate.VerificationCode,
+                certificate.IssuedAtUtc,
+                certificate.RevokedAtUtc == null))
+            .ToListAsync(cancellationToken);
+
+        return OperationResult.FromValue<IReadOnlyList<CertificateView>>(certificates);
+    }
+
+    public async Task<OperationResult<CertificateVerification>> VerifyCertificateAsync(
+        string verificationCode,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(verificationCode) || verificationCode.Length > 32)
+        {
+            return OperationResult.NotFound().ToFailure<CertificateVerification>();
+        }
+
+        string normalized = verificationCode.Trim().ToUpperInvariant();
+
+        CertificateVerification? verification = await context.Certificates
+            .AsNoTracking()
+            .Where(certificate => certificate.VerificationCode == normalized)
+            .Select(certificate => new CertificateVerification(
+                certificate.CourseTitleAtIssue,
+                certificate.HolderNameAtIssue,
+                certificate.IssuedAtUtc,
+                certificate.RevokedAtUtc == null,
+                certificate.RevokedAtUtc))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return verification is null
+            ? OperationResult.NotFound().ToFailure<CertificateVerification>()
+            : OperationResult.FromValue(verification);
+    }
+
+    public async Task<OperationResult<CertificateView>> RevokeCertificateAsync(
+        Guid certificateId,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return OperationResult.Invalid(
+                ErrorCodes.ValidationFailed,
+                "reason",
+                "A revocation must say why.")
+                .ToFailure<CertificateView>();
+        }
+
+        Certificate? certificate = await context.Certificates
+            .FirstOrDefaultAsync(candidate => candidate.Id == certificateId, cancellationToken);
+
+        if (certificate is null)
+        {
+            return OperationResult.NotFound().ToFailure<CertificateView>();
+        }
+
+        if (certificate.RevokedAtUtc is null)
+        {
+            DateTimeOffset now = timeProvider.GetUtcNow();
+
+            certificate.RevokedAtUtc = now;
+            certificate.RevocationReason = reason.Trim();
+            certificate.UpdatedAtUtc = now;
+
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        return OperationResult.FromValue(new CertificateView(
+            certificate.Id,
+            certificate.CourseId,
+            certificate.CourseTitleAtIssue,
+            certificate.HolderNameAtIssue,
+            certificate.VerificationCode,
+            certificate.IssuedAtUtc,
+            IsValid: false));
     }
 
     /// <summary>

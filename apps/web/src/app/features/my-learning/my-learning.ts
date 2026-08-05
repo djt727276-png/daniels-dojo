@@ -90,6 +90,9 @@ type LearningState =
                         </a>
                       }
                       <a matButton [routerLink]="['/courses', course.slug]">Outline</a>
+                      @if (course.percentComplete === 100) {
+                        <a matButton routerLink="/certificates">Certificate</a>
+                      }
                     </mat-card-actions>
                   </mat-card>
                 </li>

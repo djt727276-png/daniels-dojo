@@ -5,6 +5,10 @@ using DanielsDojo.Application.Learning;
 
 namespace DanielsDojo.Api.Learning;
 
+/// <summary>Why a certificate is being revoked.</summary>
+/// <param name="Reason">Mandatory human explanation, recorded on the certificate.</param>
+internal sealed record RevokeCertificateRequest(string Reason);
+
 /// <summary>
 /// The learner-facing course experience.
 /// </summary>
@@ -54,6 +58,37 @@ internal static class LearningEndpoints
                     currentUser.User!.UserId, lessonId, update, cancellationToken)))
             .RequireAuthorization(AuthenticationRegistration.StudentPolicy)
             .WithName("RecordLessonProgress");
+
+        learning.MapGet("/certificates", async (
+                ICurrentUser currentUser,
+                ILearningService service,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await service.ListCertificatesAsync(currentUser.User!.UserId, cancellationToken)))
+            .RequireAuthorization(AuthenticationRegistration.StudentPolicy)
+            .WithName("GetMyCertificates");
+
+        // Public verification: anyone holding a printed code may confirm it. Only what the
+        // certificate itself displays comes back.
+        apiV1.MapGet("/certificates/{verificationCode}/verify", async (
+                string verificationCode,
+                ILearningService service,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await service.VerifyCertificateAsync(verificationCode, cancellationToken)))
+            .AllowAnonymous()
+            .WithName("VerifyCertificate");
+
+        apiV1.MapPost("/admin/certificates/{certificateId:guid}/revoke", async (
+                Guid certificateId,
+                RevokeCertificateRequest request,
+                ILearningService service,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await service.RevokeCertificateAsync(
+                    certificateId, request.Reason, cancellationToken)))
+            .RequireAuthorization(AuthenticationRegistration.AdminPolicy)
+            .WithName("RevokeCertificate");
 
         learning.MapGet("/my-learning", async (
                 ICurrentUser currentUser,
