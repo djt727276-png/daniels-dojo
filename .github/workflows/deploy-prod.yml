@@ -94,7 +94,7 @@ jobs:
           CONNECTION=$(az keyvault secret show --vault-name "$VAULT" \
             --name sql-connection-string --query value -o tsv)
           export ConnectionStrings__DanielsDojoDatabase="$CONNECTION"
-          dotnet tool install --global dotnet-ef
+          dotnet tool restore
           dotnet ef migrations list \
             --project apps/api/src/DanielsDojo.Infrastructure \
             --startup-project apps/api/src/DanielsDojo.Infrastructure \

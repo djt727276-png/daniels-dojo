@@ -39,12 +39,11 @@ jobs:
       - name: Build (Release, warnings as errors)
         run: dotnet build apps/api/DanielsDojo.slnx -c Release --no-restore
 
-      - name: Install EF tooling
-        run: dotnet tool install --global dotnet-ef
+      - name: Restore repository tools
+        run: dotnet tool restore
 
       - name: Migration drift check
         run: >
-          export PATH="$PATH:$HOME/.dotnet/tools" &&
           dotnet ef migrations has-pending-model-changes
           --project apps/api/src/DanielsDojo.Infrastructure
           --startup-project apps/api/src/DanielsDojo.Infrastructure
