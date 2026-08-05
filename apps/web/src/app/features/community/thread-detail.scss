@@ -14,6 +14,17 @@
   border-radius: var(--dd-radius-lg);
 }
 
+.posts__item--solution {
+  border-color: var(--dd-success);
+  border-width: 2px;
+}
+
+.posts__solution {
+  font-size: var(--dd-text-sm);
+  font-weight: var(--dd-weight-medium);
+  color: var(--dd-success);
+}
+
 .posts__header {
   display: flex;
   align-items: baseline;

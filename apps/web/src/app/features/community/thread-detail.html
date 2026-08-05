@@ -28,6 +28,10 @@
             <app-status-chip [label]="current.status" tone="neutral" srPrefix="Thread status" />
           }
 
+          @if (current.solvedPostId) {
+            <app-status-chip label="Solved" tone="success" srPrefix="Thread status" />
+          }
+
           <button
             matButton="outlined"
             type="button"
@@ -45,9 +49,18 @@
 
         <ol class="posts" data-testid="post-list">
           @for (post of posts(); track post.id) {
-            <li class="posts__item" [attr.data-testid]="'post-' + post.id">
+            <li
+              class="posts__item"
+              [class.posts__item--solution]="post.id === current.solvedPostId"
+              [attr.data-testid]="'post-' + post.id"
+            >
               <div class="posts__header">
                 <span class="posts__author">{{ post.authorHandle }}</span>
+                @if (post.id === current.solvedPostId) {
+                  <span class="posts__solution" [attr.data-testid]="'solution-' + post.id">
+                    ✓ Accepted answer
+                  </span>
+                }
                 @if (post.editedAtUtc) {
                   <span class="posts__edited">edited</span>
                 }
@@ -125,6 +138,30 @@
                   >
                     Report
                   </button>
+                }
+
+                @if (current.canMarkSolved && !post.withheld && !$first) {
+                  @if (post.id === current.solvedPostId) {
+                    <button
+                      matButton
+                      type="button"
+                      [disabled]="busy()"
+                      (click)="clearSolved()"
+                      [attr.data-testid]="'unmark-solved-' + post.id"
+                    >
+                      Unmark answer
+                    </button>
+                  } @else {
+                    <button
+                      matButton
+                      type="button"
+                      [disabled]="busy()"
+                      (click)="markSolved(post)"
+                      [attr.data-testid]="'mark-solved-' + post.id"
+                    >
+                      Mark as answer
+                    </button>
+                  }
                 }
               </div>
             </li>

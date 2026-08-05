@@ -30,6 +30,13 @@ public sealed class ForumThread
     /// <summary>Whether the thread is pinned to the top of its category.</summary>
     public bool IsPinned { get; set; }
 
+    /// <summary>
+    /// The reply the thread author accepted as the answer, if any. Only the author chooses
+    /// it, it must be a reply in this thread (never the opening post), and clearing it is
+    /// always allowed — an accepted answer is a signpost, not a lock.
+    /// </summary>
+    public Guid? SolvedPostId { get; set; }
+
     /// <summary>Most recent post instant, used for ordering. Stored UTC.</summary>
     public DateTimeOffset LastActivityAtUtc { get; set; }
 
@@ -50,6 +57,9 @@ public sealed class ForumThread
 
     /// <summary>The member who started the thread.</summary>
     public User? Author { get; set; }
+
+    /// <summary>The accepted answer, if one has been chosen.</summary>
+    public ForumPost? SolvedPost { get; set; }
 
     /// <summary>Posts in this thread.</summary>
     public ICollection<ForumPost> Posts { get; } = new List<ForumPost>();

@@ -28,6 +28,7 @@ export interface ForumThreadSummary {
   readonly authorHidden: boolean;
   readonly status: ThreadStatus;
   readonly isPinned: boolean;
+  readonly isSolved: boolean;
   readonly replyCount: number;
   readonly createdAtUtc: string;
   readonly lastActivityAtUtc: string;
@@ -62,10 +63,24 @@ export interface ForumThreadDetail {
   readonly isPinned: boolean;
   readonly acceptsReplies: boolean;
   readonly subscribed: boolean;
+  readonly solvedPostId: string | null;
+  readonly canMarkSolved: boolean;
   readonly createdAtUtc: string;
   readonly lastActivityAtUtc: string;
   readonly posts: PagedResult<ForumPostView>;
   readonly rowVersion: string;
+}
+
+/** One search hit: a thread plus a short excerpt of the first matching post. */
+export interface ForumSearchResult {
+  readonly threadId: string;
+  readonly title: string;
+  readonly categorySlug: string;
+  readonly categoryName: string;
+  readonly status: ThreadStatus;
+  readonly isSolved: boolean;
+  readonly snippet: string | null;
+  readonly lastActivityAtUtc: string;
 }
 
 /** Another member as this viewer is allowed to see them. */
@@ -300,6 +315,16 @@ export class CommunityApi {
 
   setReaction(postId: string, liked: boolean): Observable<ForumThreadDetail> {
     return this.http.put<ForumThreadDetail>(`${this.root}/posts/${postId}/reaction`, { liked });
+  }
+
+  setSolved(threadId: string, postId: string | null): Observable<ForumThreadDetail> {
+    return this.http.put<ForumThreadDetail>(`${this.root}/threads/${threadId}/solved`, { postId });
+  }
+
+  search(query: string, page = 1): Observable<PagedResult<ForumSearchResult>> {
+    return this.http.get<PagedResult<ForumSearchResult>>(`${this.root}/search`, {
+      params: new HttpParams().set('q', query).set('page', page),
+    });
   }
 
   setSubscription(threadId: string, subscribed: boolean): Observable<ForumThreadDetail> {

@@ -43,6 +43,8 @@ function thread(
     isPinned: false,
     acceptsReplies: true,
     subscribed: false,
+    solvedPostId: null,
+    canMarkSolved: false,
     createdAtUtc: '2026-01-01T00:00:00+00:00',
     lastActivityAtUtc: '2026-01-01T00:00:00+00:00',
     posts: { items: posts, page: 1, pageSize: 20, totalCount: posts.length, totalPages: 1 },
@@ -138,6 +140,36 @@ describe('ThreadDetail', () => {
     expect(
       dom.querySelector('[data-testid="report-aaaaaaaa-1111-4111-8111-111111111111"]'),
     ).toBeNull();
+  });
+
+  it('offers the answer buttons only to the thread author and never on the opening post', () => {
+    const { fixture, http } = setup();
+
+    const opening = post();
+    const reply = post({ id: 'bbbbbbbb-1111-4111-8111-111111111111' });
+
+    http.expectOne(THREAD_URL).flush(thread([opening, reply], { canMarkSolved: true }));
+    fixture.detectChanges();
+
+    const dom = host(fixture);
+    expect(dom.querySelector(`[data-testid="mark-solved-${opening.id}"]`)).toBeNull();
+    expect(dom.querySelector(`[data-testid="mark-solved-${reply.id}"]`)).not.toBeNull();
+  });
+
+  it('badges the accepted answer for every reader', () => {
+    const { fixture, http } = setup();
+
+    const reply = post({ id: 'bbbbbbbb-1111-4111-8111-111111111111' });
+
+    http
+      .expectOne(THREAD_URL)
+      .flush(thread([post(), reply], { solvedPostId: reply.id, canMarkSolved: false }));
+    fixture.detectChanges();
+
+    const dom = host(fixture);
+    expect(dom.querySelector(`[data-testid="solution-${reply.id}"]`)).not.toBeNull();
+    expect(dom.querySelector(`[data-testid="mark-solved-${reply.id}"]`)).toBeNull();
+    expect(dom.textContent).toContain('Accepted answer');
   });
 
   it('hides the reply form when the thread is closed', () => {

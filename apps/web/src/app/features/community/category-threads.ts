@@ -99,6 +99,10 @@ type ThreadsState =
                         <app-status-chip label="Pinned" tone="info" srPrefix="Thread" />
                       }
 
+                      @if (thread.isSolved) {
+                        <app-status-chip label="Solved" tone="success" srPrefix="Thread" />
+                      }
+
                       @if (thread.status !== 'Open') {
                         <app-status-chip
                           [label]="thread.status"

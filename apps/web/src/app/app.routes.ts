@@ -179,6 +179,13 @@ export const routes: Routes = [
     title: "Community — Daniel's Dojo",
   },
   {
+    path: 'community/search',
+    loadComponent: () =>
+      import('./features/community/community-search').then((m) => m.CommunitySearch),
+    canActivate: [authenticatedGuard],
+    title: "Search discussions — Daniel's Dojo",
+  },
+  {
     path: 'community/c/:categorySlug',
     loadComponent: () =>
       import('./features/community/category-threads').then((m) => m.CategoryThreads),

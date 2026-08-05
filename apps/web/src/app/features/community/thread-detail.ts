@@ -169,6 +169,14 @@ export class ThreadDetail {
     this.run(this.api.setReaction(post.id, !post.likedByMe));
   }
 
+  protected markSolved(post: ForumPostView): void {
+    this.run(this.api.setSolved(this.threadId, post.id));
+  }
+
+  protected clearSolved(): void {
+    this.run(this.api.setSolved(this.threadId, null));
+  }
+
   protected toggleSubscription(): void {
     const thread = this.thread();
 
