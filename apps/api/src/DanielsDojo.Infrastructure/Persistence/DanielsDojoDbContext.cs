@@ -97,6 +97,9 @@ public sealed class DanielsDojoDbContext(DbContextOptions<DanielsDojoDbContext> 
     /// <summary>Course-completion certificates.</summary>
     public DbSet<Certificate> Certificates => Set<Certificate>();
 
+    /// <summary>Student course reviews.</summary>
+    public DbSet<CourseReview> CourseReviews => Set<CourseReview>();
+
     /// <summary>Community profiles.</summary>
     public DbSet<CommunityProfile> CommunityProfiles => Set<CommunityProfile>();
 

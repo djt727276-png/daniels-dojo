@@ -12,6 +12,7 @@ import {
   formatLevel,
   formatPrice,
 } from '../../core/catalog/catalog.model';
+import { CourseReviewsSection } from './course-reviews';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 
@@ -37,6 +38,7 @@ type DetailState =
     MatExpansionModule,
     MatTooltipModule,
     PageHeader,
+    CourseReviewsSection,
     LoadingState,
     EmptyState,
     ErrorState,

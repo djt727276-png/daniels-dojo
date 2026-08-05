@@ -90,6 +90,71 @@ internal static class LearningEndpoints
             .RequireAuthorization(AuthenticationRegistration.AdminPolicy)
             .WithName("RevokeCertificate");
 
+        // Reviews. Reading is public on published courses; writing is gated server-side on
+        // entitlement plus real progress, and one slot per member per course.
+        apiV1.MapGet("/catalog/courses/{courseSlug}/reviews", async (
+                string courseSlug,
+                int? page,
+                ICurrentUser currentUser,
+                ICourseReviewService service,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await service.GetCourseReviewsAsync(
+                    courseSlug, currentUser.User == null ? null : currentUser.User.UserId, page ?? 0, cancellationToken)))
+            .AllowAnonymous()
+            .WithName("GetCourseReviews");
+
+        learning.MapPut("/courses/{courseSlug}/review", async (
+                string courseSlug,
+                WriteReviewRequest request,
+                ICurrentUser currentUser,
+                ICourseReviewService service,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await service.WriteReviewAsync(
+                    currentUser.User!.UserId, courseSlug, request, cancellationToken)))
+            .RequireAuthorization(AuthenticationRegistration.StudentPolicy)
+            .WithName("WriteCourseReview");
+
+        learning.MapDelete("/courses/{courseSlug}/review", async (
+                string courseSlug,
+                ICurrentUser currentUser,
+                ICourseReviewService service,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await service.DeleteReviewAsync(
+                    currentUser.User!.UserId, courseSlug, cancellationToken)))
+            .RequireAuthorization(AuthenticationRegistration.StudentPolicy)
+            .WithName("DeleteCourseReview");
+
+        apiV1.MapGet("/admin/reviews", async (
+                string? status,
+                ICourseReviewService service,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await service.ListForModerationAsync(status, cancellationToken)))
+            .RequireAuthorization(AuthenticationRegistration.AdminPolicy)
+            .WithName("ListReviewsForModeration");
+
+        apiV1.MapPost("/admin/reviews/{reviewId:guid}/hide", async (
+                Guid reviewId,
+                RevokeCertificateRequest request,
+                ICourseReviewService service,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await service.HideReviewAsync(reviewId, request.Reason, cancellationToken)))
+            .RequireAuthorization(AuthenticationRegistration.AdminPolicy)
+            .WithName("HideReview");
+
+        apiV1.MapPost("/admin/reviews/{reviewId:guid}/restore", async (
+                Guid reviewId,
+                ICourseReviewService service,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await service.RestoreReviewAsync(reviewId, cancellationToken)))
+            .RequireAuthorization(AuthenticationRegistration.AdminPolicy)
+            .WithName("RestoreReview");
+
         learning.MapGet("/my-learning", async (
                 ICurrentUser currentUser,
                 ILearningService service,
