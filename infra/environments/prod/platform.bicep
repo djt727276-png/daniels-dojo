@@ -30,6 +30,9 @@ param sqlEntraAdminObjectId string
 @description('Full image reference for the API. The same verified digest that passed in dev.')
 param apiImage string = ''
 
+@description('False only while the subscription quota blocks a second Container Apps environment (Free Trial allows one). Everything except compute still deploys; flip to true after the subscription upgrade.')
+param deployContainerEnvironment bool = true
+
 @description('Email address that receives budget alerts.')
 param budgetAlertEmail string
 
@@ -52,7 +55,8 @@ module platform '../../modules/platform.bicep' = {
     corsOrigins: corsOrigins
     apiImage: apiImage
     mediaStorageAccountName: mediaStorageAccountName
-    deployApiApp: apiImage != ''
+    deployApiApp: apiImage != '' && deployContainerEnvironment
+    deployContainerEnvironment: deployContainerEnvironment
     monthlyBudgetUsd: 25
     budgetAlertEmail: budgetAlertEmail
   }

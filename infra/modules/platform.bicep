@@ -41,6 +41,9 @@ param apiImage string
 @description('Whether the API container app should be created. False on the first pass, before an image exists.')
 param deployApiApp bool = true
 
+@description('Whether the Container Apps environment should be created. False only while a subscription-level quota (e.g. the Free Trial cap of one environment) blocks it; everything that does not depend on compute still deploys, and flipping this to true later completes the environment in place.')
+param deployContainerEnvironment bool = true
+
 @description('Whether Stripe credentials exist in the vault. When false the API runs with commerce disabled (fail-closed) and the two Stripe secret references are omitted, because a Container App refuses to start while referencing a vault secret that has no value.')
 param stripeConfigured bool = false
 
@@ -337,7 +340,7 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = 
 
 // ------------------------------------------------------------------ container apps
 
-resource containerEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
+resource containerEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = if (deployContainerEnvironment) {
   name: '${prefix}-env'
   location: location
   properties: {
