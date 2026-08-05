@@ -107,6 +107,45 @@
   width: 100%;
 }
 
+.account__avatar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dd-space-4);
+  --dd-avatar-size: 4rem;
+}
+
+.account__avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dd-space-2);
+}
+
+/* The label is the visible button; the input inside it stays reachable by keyboard but
+   contributes no box of its own. */
+.account__avatar-upload {
+  cursor: pointer;
+}
+
+.account__avatar-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.account__data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dd-space-3);
+}
+
+.account__danger {
+  --mat-button-outlined-label-text-color: var(--dd-danger);
+  --mat-button-outlined-outline-color: var(--dd-danger);
+}
+
 .account__saved {
   margin: 0;
   padding: var(--dd-space-2) var(--dd-space-3);

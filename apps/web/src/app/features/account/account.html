@@ -57,6 +57,51 @@
                   >. These settings control what other members can do.
                 </p>
 
+                <div class="account__avatar-row">
+                  <app-avatar
+                    [userId]="session()?.userId ?? ''"
+                    [handle]="community.handle"
+                    [hasAvatar]="community.hasAvatar"
+                    [version]="avatarVersion()"
+                  />
+
+                  <div class="account__avatar-actions">
+                    <label matButton="outlined" class="account__avatar-upload">
+                      {{ community.hasAvatar ? 'Replace photo' : 'Add a photo' }}
+                      <input
+                        class="account__avatar-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        (change)="uploadAvatar($event)"
+                        data-testid="avatar-input"
+                      />
+                    </label>
+
+                    @if (community.hasAvatar) {
+                      <button
+                        matButton
+                        type="button"
+                        [disabled]="savingAvatar()"
+                        (click)="removeAvatar()"
+                        data-testid="avatar-remove"
+                      >
+                        Remove photo
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <p class="account__hint">
+                  JPEG, PNG, GIF, or WebP up to 2&nbsp;MB. Photos are resized to a small square and
+                  stripped of all metadata before anyone sees them.
+                </p>
+
+                @if (avatarError(); as message) {
+                  <p class="account__notice" role="alert" data-testid="avatar-error">
+                    {{ message }}
+                  </p>
+                }
+
                 @if (privacyMessage(); as message) {
                   <p class="account__saved" role="status" data-testid="privacy-saved">
                     {{ message }}
@@ -131,7 +176,53 @@
           }
         }
 
-        <button type="button" class="account__action" (click)="signOut()">Sign out</button>
+        <!--
+          The member's rights over their data. Export downloads everything; deletion is the
+          documented lifecycle and requires typing the phrase, not just clicking.
+        -->
+        <mat-card appearance="outlined" class="account__card">
+          <mat-card-content class="dd-stack">
+            <h2 class="account__heading">Your data</h2>
+            <p class="account__hint">
+              Download a copy of everything Daniel's Dojo holds about you, or delete your account.
+              Deletion removes your community presence and personal details immediately; records we
+              are legally required to keep (such as payment records) are retained without your name
+              attached. See the
+              <a routerLink="/legal/privacy">privacy policy</a> for the full retention table.
+            </p>
+
+            @if (privacyDataError(); as message) {
+              <p class="account__notice" role="alert" data-testid="data-error">{{ message }}</p>
+            }
+
+            <div class="account__data-actions">
+              <button
+                matButton="outlined"
+                type="button"
+                [disabled]="busyWithData()"
+                (click)="downloadData()"
+                data-testid="download-data"
+              >
+                Download my data
+              </button>
+
+              <button
+                matButton="outlined"
+                type="button"
+                class="account__danger"
+                [disabled]="busyWithData()"
+                (click)="deleteAccount()"
+                data-testid="delete-account"
+              >
+                Delete my account
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <button type="button" class="account__action" (click)="signOut()" data-testid="sign-out">
+          Sign out
+        </button>
       }
 
       @case ('forbidden') {

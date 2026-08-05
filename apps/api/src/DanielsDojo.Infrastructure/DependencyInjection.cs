@@ -73,6 +73,8 @@ public static class DependencyInjection
         services.AddScoped<IForumService, ForumService>();
         services.AddScoped<IModerationService, ModerationService>();
         services.AddScoped<ISocialService, SocialService>();
+        services.AddScoped<IAvatarService, AvatarService>();
+        services.AddScoped<Application.Privacy.IPrivacyService, Privacy.PrivacyService>();
 
         // Realtime is optional infrastructure: the API host replaces this with the SignalR
         // notifier. TryAdd keeps the replacement authoritative.

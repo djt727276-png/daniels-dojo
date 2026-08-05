@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { provideRouter } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { Session, SessionState } from '../../core/auth/session.model';
@@ -53,7 +54,7 @@ function setup() {
 
   TestBed.configureTestingModule({
     imports: [Account],
-    providers: [{ provide: AuthService, useValue: auth }],
+    providers: [{ provide: AuthService, useValue: auth }, provideRouter([])],
   });
 
   const fixture = TestBed.createComponent(Account);
@@ -135,7 +136,7 @@ describe('Account', () => {
     fixture.detectChanges();
 
     const element: HTMLElement = fixture.nativeElement;
-    const button = element.querySelector('button');
+    const button = element.querySelector<HTMLButtonElement>('[data-testid="sign-out"]');
     button?.click();
 
     expect(auth.signOutCalls).toBe(1);

@@ -50,10 +50,36 @@ import { ProsePage } from './prose-page';
 
       <h2>Your choices</h2>
       <p>
-        You can update your profile at any time, request an export of your data, or request account
-        deletion from the account page. Financial and audit records are retained for the period the
-        law requires even after deletion.
+        You can update your profile at any time, download an export of your data, or delete your
+        account — both directly from the account page, no support ticket required. The export is a
+        JSON file containing your account details, community profile, friendships, the messages and
+        posts you wrote, your reviews, enrollments, certificates, and order summaries.
       </p>
+
+      <h2>What deletion does, exactly</h2>
+      <ul>
+        <li>
+          Removed immediately: your community profile and handle, your photo, friendships and friend
+          requests, blocks, notifications, and your name and email from our account records.
+        </li>
+        <li>
+          Emptied but kept in shape: direct messages you sent become "message deleted" placeholders
+          so the other person's conversation still makes sense; your course reviews are withdrawn.
+        </li>
+        <li>
+          Kept without your name: forum posts remain, shown as "Former member", because removing
+          them would tear holes in other members' discussions.
+        </li>
+        <li>
+          Kept as required records: order and payment records (typically 7 years for tax law),
+          certificate issuance records so earned certificates stay verifiable, and the audit trail
+          of administrative actions. None of these carry your name after deletion.
+        </li>
+        <li>
+          Your sign-in link is severed. If you return, you start a completely new account — nothing
+          from before is reattached.
+        </li>
+      </ul>
 
       <h2>Cookies and analytics</h2>
       <p>

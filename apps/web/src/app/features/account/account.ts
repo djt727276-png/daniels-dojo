@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -16,6 +17,8 @@ import {
   MessagePolicy,
   MyCommunityProfile,
 } from '../../core/community/member-api';
+import { Avatar } from '../../shared/ui/avatar/avatar';
+import { ConfirmDialog, ConfirmDialogResult } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /**
  * Account page. Renders the session the API reported, offers sign-in and sign-out, and owns
@@ -36,6 +39,7 @@ import {
     MatInputModule,
     MatSelectModule,
     MatCheckboxModule,
+    Avatar,
   ],
   templateUrl: './account.html',
   styleUrl: './account.scss',
@@ -43,6 +47,7 @@ import {
 export class Account {
   private readonly auth = inject(AuthService);
   private readonly members = inject(MemberApi);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly state = this.auth.sessionState;
   protected readonly session = this.auth.session;
@@ -54,6 +59,11 @@ export class Account {
   protected readonly savingPrivacy = signal(false);
   protected readonly privacyMessage = signal<string | null>(null);
   protected readonly privacyError = signal<string | null>(null);
+  protected readonly savingAvatar = signal(false);
+  protected readonly avatarError = signal<string | null>(null);
+  protected readonly avatarVersion = signal(0);
+  protected readonly busyWithData = signal(false);
+  protected readonly privacyDataError = signal<string | null>(null);
 
   protected readonly privacyForm = new FormGroup({
     bio: new FormControl('', { nonNullable: true }),
@@ -100,6 +110,111 @@ export class Account {
         this.profileLoaded.set(true);
       },
     });
+  }
+
+  protected uploadAvatar(event: Event): void {
+    const inputElement = event.target as HTMLInputElement;
+    const file = inputElement.files?.[0];
+    inputElement.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    this.savingAvatar.set(true);
+    this.avatarError.set(null);
+
+    this.members.uploadAvatar(file).subscribe({
+      next: () => {
+        this.savingAvatar.set(false);
+        this.avatarVersion.update((version) => version + 1);
+        this.loadProfile();
+      },
+      error: (error: unknown) => {
+        this.savingAvatar.set(false);
+        this.avatarError.set(toApiFailure(error, 'That photo could not be used.').message);
+      },
+    });
+  }
+
+  protected removeAvatar(): void {
+    this.savingAvatar.set(true);
+    this.avatarError.set(null);
+
+    this.members.removeAvatar().subscribe({
+      next: () => {
+        this.savingAvatar.set(false);
+        this.avatarVersion.update((version) => version + 1);
+        this.loadProfile();
+      },
+      error: (error: unknown) => {
+        this.savingAvatar.set(false);
+        this.avatarError.set(toApiFailure(error, 'The photo was not removed.').message);
+      },
+    });
+  }
+
+  protected downloadData(): void {
+    this.busyWithData.set(true);
+    this.privacyDataError.set(null);
+
+    this.members.exportMyData().subscribe({
+      next: (blob) => {
+        this.busyWithData.set(false);
+
+        // An ordinary browser download of the member's own copy.
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'daniels-dojo-my-data.json';
+        anchor.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (error: unknown) => {
+        this.busyWithData.set(false);
+        this.privacyDataError.set(
+          toApiFailure(error, 'Your data could not be exported just now.').message,
+        );
+      },
+    });
+  }
+
+  protected deleteAccount(): void {
+    this.dialog
+      .open<ConfirmDialog, unknown, ConfirmDialogResult>(ConfirmDialog, {
+        data: {
+          title: 'Delete your account?',
+          message:
+            'This is immediate and cannot be undone. Your community profile, photo, ' +
+            'friendships, and messages are removed; payment records we must keep by law ' +
+            'are kept without your name. Type "delete my account" to confirm.',
+          confirmLabel: 'Delete my account',
+          destructive: true,
+          requireReason: true,
+          reasonLabel: 'Type: delete my account',
+        },
+        width: '32rem',
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+
+        this.busyWithData.set(true);
+        this.privacyDataError.set(null);
+
+        this.members.deleteMyAccount(result.reason).subscribe({
+          next: () => {
+            // The account is gone; end the session cleanly.
+            this.signOut();
+          },
+          error: (error: unknown) => {
+            this.busyWithData.set(false);
+            this.privacyDataError.set(toApiFailure(error, 'Your account was not deleted.').message);
+          },
+        });
+      });
   }
 
   protected savePrivacy(): void {
