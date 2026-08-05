@@ -1,10 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 
 import { toApiFailure } from '../../core/api/problem-details';
 import { Dashboard as DashboardModel, MemberApi } from '../../core/community/member-api';
+import { LearningApi, MyLearningCourse } from '../../core/learning/learning-api';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 import { StatCard } from '../../shared/ui/stat-card/stat-card';
@@ -25,6 +27,7 @@ type DashboardState =
   imports: [
     RouterLink,
     MatCardModule,
+    MatProgressBarModule,
     MatButtonModule,
     PageHeader,
     StatCard,
@@ -51,11 +54,38 @@ type DashboardState =
               <a matButton="filled" routerLink="/courses">Browse courses</a>
             </app-page-header>
 
+            @if (continueCourse(); as next) {
+              <mat-card appearance="outlined" class="dashboard__continue">
+                <mat-card-content class="dashboard__continue-body">
+                  <div class="dashboard__continue-text">
+                    <p class="dashboard__continue-label">Continue learning</p>
+                    <h2 class="dashboard__continue-title">{{ next.title }}</h2>
+                    <p class="dashboard__note">
+                      {{ next.completedLessons }} of {{ next.totalLessons }} lessons complete
+                    </p>
+                    <mat-progress-bar
+                      mode="determinate"
+                      [value]="next.percentComplete"
+                      [attr.aria-label]="'Progress in ' + next.title"
+                    />
+                  </div>
+                  <div class="dashboard__continue-actions">
+                    @if (next.resumeLessonId; as resume) {
+                      <a matButton="filled" [routerLink]="['/learn/lessons', resume]">
+                        {{ next.completedLessons === 0 ? 'Start' : 'Continue' }}
+                      </a>
+                    }
+                    <a matButton routerLink="/my-learning">My Learning</a>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            }
+
             <section class="stats" aria-label="Your activity">
               <app-stat-card
                 label="Your courses"
                 [value]="view.enrolledCourseCount"
-                note="Enrollment opens with purchasing"
+                note="Held through membership or purchase"
               />
               <app-stat-card
                 label="Courses available"
@@ -73,11 +103,10 @@ type DashboardState =
             @if (!view.purchasingAvailable) {
               <mat-card appearance="outlined">
                 <mat-card-content>
-                  <h2 class="dashboard__heading">Purchasing is not open yet</h2>
+                  <h2 class="dashboard__heading">Purchasing is not enabled here yet</h2>
                   <p class="dashboard__note" data-testid="purchasing-note">
-                    You can read the catalog and take part in the community now. Buying a course or
-                    a membership arrives in a later release, so nothing on this site charges you
-                    today.
+                    You can read the catalog, watch free previews, and take part in the community.
+                    Nothing in this environment charges you.
                   </p>
                 </mat-card-content>
               </mat-card>
@@ -129,6 +158,45 @@ type DashboardState =
     </div>
   `,
   styles: `
+    .dashboard__continue {
+      /* The one card allowed the gold accent: it marks the member's own momentum. */
+      border-left: 4px solid var(--dd-accent);
+    }
+
+    .dashboard__continue-body {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--dd-space-5);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dashboard__continue-text {
+      display: flex;
+      flex: 1 1 18rem;
+      flex-direction: column;
+      gap: var(--dd-space-2);
+    }
+
+    .dashboard__continue-label {
+      font-size: var(--dd-text-sm);
+      font-weight: var(--dd-weight-medium);
+      color: var(--dd-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .dashboard__continue-title {
+      font-size: var(--dd-text-xl);
+      font-weight: var(--dd-weight-medium);
+    }
+
+    .dashboard__continue-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--dd-space-3);
+    }
+
     .stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
@@ -155,8 +223,15 @@ type DashboardState =
 })
 export class Dashboard {
   private readonly api = inject(MemberApi);
+  private readonly learning = inject(LearningApi);
 
   protected readonly state = signal<DashboardState>({ kind: 'loading' });
+
+  /**
+   * The most recently opened course the member holds, for the continue card. The server
+   * orders the shelf by last access, so the first entry is where they left off.
+   */
+  protected readonly continueCourse = signal<MyLearningCourse | null>(null);
 
   protected readonly dashboard = computed(() => {
     const current = this.state();
@@ -174,6 +249,13 @@ export class Dashboard {
 
   protected load(): void {
     this.state.set({ kind: 'loading' });
+
+    // Best effort: an empty or failed shelf simply hides the continue card. The dashboard
+    // itself never fails because of it.
+    this.learning.getMyLearning().subscribe({
+      next: (courses) => this.continueCourse.set(courses[0] ?? null),
+      error: () => this.continueCourse.set(null),
+    });
 
     this.api.getDashboard().subscribe({
       next: (dashboard) => this.state.set({ kind: 'ready', dashboard }),
