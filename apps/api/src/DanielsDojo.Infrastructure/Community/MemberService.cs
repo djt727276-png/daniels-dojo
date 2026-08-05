@@ -115,7 +115,9 @@ internal sealed class MemberService : IMemberService
             .AsNoTracking()
             .FirstOrDefaultAsync(candidate => candidate.UserId == userId, cancellationToken);
 
-        return profile is null ? null : Project(profile);
+        return profile is null
+            ? null
+            : Project(profile, await HasAvatarAsync(userId, cancellationToken));
     }
 
     public async Task<OperationResult<MyCommunityProfile>> CompleteCommunitySetupAsync(
@@ -199,7 +201,8 @@ internal sealed class MemberService : IMemberService
                 "That handle is taken.").ToFailure<MyCommunityProfile>();
         }
 
-        return OperationResult.FromValue(Project(created));
+        // A brand-new profile cannot have an avatar yet: uploads require the profile.
+        return OperationResult.FromValue(Project(created, hasAvatar: false));
     }
 
     public async Task<OperationResult<MyCommunityProfile>> UpdateCommunityProfileAsync(
@@ -261,7 +264,8 @@ internal sealed class MemberService : IMemberService
             return OperationResult.ConcurrencyConflict().ToFailure<MyCommunityProfile>();
         }
 
-        return OperationResult.FromValue(Project(profile));
+        return OperationResult.FromValue(
+            Project(profile, await HasAvatarAsync(userId, cancellationToken)));
     }
 
     /// <summary>Counts conversations holding a message the member has not read yet.</summary>
@@ -280,9 +284,13 @@ internal sealed class MemberService : IMemberService
                         && state.LastReadAtUtc >= message.CreatedAtUtc)),
                 cancellationToken);
 
-    private static MyCommunityProfile Project(CommunityProfile profile) => new(
+    private Task<bool> HasAvatarAsync(Guid userId, CancellationToken cancellationToken) =>
+        context.ProfileAvatars.AnyAsync(avatar => avatar.UserId == userId, cancellationToken);
+
+    private static MyCommunityProfile Project(CommunityProfile profile, bool hasAvatar) => new(
         profile.Handle,
         profile.Bio,
+        hasAvatar,
         profile.IsDiscoverable,
         profile.FriendRequestPolicy.ToString(),
         profile.MessagePolicy.ToString(),

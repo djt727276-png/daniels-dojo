@@ -51,6 +51,13 @@
       where a leaked account key cannot.
     -->
     <PackageVersion Include="Azure.Identity" Version="1.17.2" />
+    <!--
+      Avatar re-encoding. Every uploaded avatar is decoded and re-encoded server-side, so the
+      stored bytes are always produced by this library — never the client's original file,
+      which could carry embedded metadata, polyglot payloads, or an SVG's active content.
+      Pure managed code: no native assets to ship in the Linux container.
+    -->
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <!-- Binding and start-time validation for the provider option sections. -->
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.10" />

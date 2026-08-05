@@ -88,6 +88,7 @@ export interface MemberCard {
   readonly userId: string;
   readonly handle: string;
   readonly bio: string | null;
+  readonly hasAvatar: boolean;
   readonly isFriend: boolean;
   readonly requestPending: boolean;
   readonly canReceiveFriendRequests: boolean;
@@ -345,6 +346,14 @@ export class CommunityApi {
       reasonCode,
       detail,
     });
+  }
+
+  /**
+   * Fetches a member's avatar bytes. Goes through the HTTP client — not an `<img src>` —
+   * so the bearer token is attached and the server can apply block rules to the read.
+   */
+  getAvatar(userId: string): Observable<Blob> {
+    return this.http.get(`${this.root}/avatars/${userId}`, { responseType: 'blob' });
   }
 
   // ---------------------------------------------------------------- people

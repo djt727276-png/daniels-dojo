@@ -103,6 +103,9 @@ public sealed class DanielsDojoDbContext(DbContextOptions<DanielsDojoDbContext> 
     /// <summary>Community profiles.</summary>
     public DbSet<CommunityProfile> CommunityProfiles => Set<CommunityProfile>();
 
+    /// <summary>Member avatars, re-encoded server-side.</summary>
+    public DbSet<ProfileAvatar> ProfileAvatars => Set<ProfileAvatar>();
+
     /// <summary>Forum categories.</summary>
     public DbSet<ForumCategory> ForumCategories => Set<ForumCategory>();
 

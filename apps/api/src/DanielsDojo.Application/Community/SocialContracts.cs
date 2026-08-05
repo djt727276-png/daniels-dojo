@@ -13,6 +13,7 @@ public sealed record MemberCard(
     Guid UserId,
     string Handle,
     string? Bio,
+    bool HasAvatar,
     bool IsFriend,
     bool RequestPending,
     bool CanReceiveFriendRequests,

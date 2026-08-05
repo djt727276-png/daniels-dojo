@@ -903,10 +903,14 @@ internal sealed class SocialService : ISocialService
                 && request.Status == FriendRequestStatus.Pending,
             cancellationToken);
 
+        bool hasAvatar = await context.ProfileAvatars.AnyAsync(
+            avatar => avatar.UserId == profile.UserId, cancellationToken);
+
         return new MemberCard(
             profile.UserId,
             profile.Handle,
             profile.Bio,
+            hasAvatar,
             isFriend,
             pending,
             profile.FriendRequestPolicy == FriendRequestPolicy.Everyone && !isFriend && !pending,
