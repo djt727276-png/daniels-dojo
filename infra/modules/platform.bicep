@@ -47,6 +47,9 @@ param deployContainerEnvironment bool = true
 @description('Whether Stripe credentials exist in the vault. When false the API runs with commerce disabled (fail-closed) and the two Stripe secret references are omitted, because a Container App refuses to start while referencing a vault secret that has no value.')
 param stripeConfigured bool = false
 
+@description('Whether the video provider webhook secret exists in the vault. Same fail-closed rule as Stripe: when false the video provider runs Disabled and the webhook-secret reference is omitted, so the app can be provisioned — and its real hostname obtained for creating the provider webhook — before the secret exists.')
+param videoWebhookConfigured bool = true
+
 @description('Media storage account name for this environment. Public configuration, not a secret; the API reaches it with its managed identity.')
 param mediaStorageAccountName string
 
@@ -395,7 +398,6 @@ var coreSecretNames = [
   'sql-connection-string'
   'media-video-token-id'
   'media-video-token-secret'
-  'media-video-webhook-secret'
   'media-video-signing-key-id'
   'media-video-signing-key-base64'
 ]
@@ -403,7 +405,11 @@ var stripeSecretNames = [
   'commerce-stripe-secret-key'
   'commerce-stripe-webhook-secret'
 ]
-var requiredSecretNames = concat(coreSecretNames, stripeConfigured ? stripeSecretNames : [])
+var requiredSecretNames = concat(
+  coreSecretNames,
+  videoWebhookConfigured ? ['media-video-webhook-secret'] : [],
+  stripeConfigured ? stripeSecretNames : []
+)
 
 resource apiApp 'Microsoft.App/containerApps@2024-03-01' = if (deployApiApp) {
   name: '${prefix}-api'
@@ -456,11 +462,10 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = if (deployApiApp) {
             { name: 'ConnectionStrings__DanielsDojoDatabase', secretRef: 'sql-connection-string' }
             { name: 'Media__Storage__Mode', value: 'Real' }
             { name: 'Media__Storage__AccountName', value: mediaStorageAccountName }
-            { name: 'Media__Video__Mode', value: 'Real' }
+            { name: 'Media__Video__Mode', value: videoWebhookConfigured ? 'Real' : 'Disabled' }
             { name: 'Commerce__Stripe__Mode', value: stripeConfigured ? 'Real' : 'Disabled' }
             { name: 'Media__Video__TokenId', secretRef: 'media-video-token-id' }
             { name: 'Media__Video__TokenSecret', secretRef: 'media-video-token-secret' }
-            { name: 'Media__Video__WebhookSecret', secretRef: 'media-video-webhook-secret' }
             { name: 'Media__Video__SigningKeyId', secretRef: 'media-video-signing-key-id' }
             { name: 'Media__Video__SigningKeyBase64', secretRef: 'media-video-signing-key-base64' }
             {
@@ -468,7 +473,9 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = if (deployApiApp) {
               value: insights.properties.ConnectionString
             }
             { name: 'AZURE_CLIENT_ID', value: apiIdentity.properties.clientId }
-          ], stripeConfigured ? [
+          ], videoWebhookConfigured ? [
+            { name: 'Media__Video__WebhookSecret', secretRef: 'media-video-webhook-secret' }
+          ] : [], stripeConfigured ? [
             { name: 'Commerce__Stripe__SecretKey', secretRef: 'commerce-stripe-secret-key' }
             { name: 'Commerce__Stripe__WebhookSecret', secretRef: 'commerce-stripe-webhook-secret' }
           ] : [])
