@@ -33,6 +33,12 @@ param apiImage string = ''
 @description('False only while the subscription quota blocks a second Container Apps environment (Free Trial allows one). Everything except compute still deploys; flip to true after the subscription upgrade.')
 param deployContainerEnvironment bool = true
 
+@description('Whether the Stripe secrets exist in the vault. False keeps commerce Disabled, fail-closed.')
+param stripeConfigured bool = false
+
+@description('Whether the video webhook secret exists in the vault. False keeps the video provider Disabled, fail-closed, while still provisioning the app so its hostname exists for creating the provider webhook.')
+param videoWebhookConfigured bool = false
+
 @description('Email address that receives budget alerts.')
 param budgetAlertEmail string
 
@@ -57,6 +63,8 @@ module platform '../../modules/platform.bicep' = {
     mediaStorageAccountName: mediaStorageAccountName
     deployApiApp: apiImage != '' && deployContainerEnvironment
     deployContainerEnvironment: deployContainerEnvironment
+    stripeConfigured: stripeConfigured
+    videoWebhookConfigured: videoWebhookConfigured
     monthlyBudgetUsd: 25
     budgetAlertEmail: budgetAlertEmail
   }
