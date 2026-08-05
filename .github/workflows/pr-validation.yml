@@ -44,6 +44,7 @@ jobs:
 
       - name: Migration drift check
         run: >
+          export PATH="$PATH:$HOME/.dotnet/tools" &&
           dotnet ef migrations has-pending-model-changes
           --project apps/api/src/DanielsDojo.Infrastructure
           --startup-project apps/api/src/DanielsDojo.Infrastructure
@@ -110,7 +111,7 @@ jobs:
           # Provider secret shapes that must never be committed. Test fixtures use
           # obviously-synthetic values that do not match these.
           PATTERNS='sk_live_[A-Za-z0-9]|whsec_[A-Za-z0-9]{20,}|BEGIN RSA PRIVATE KEY|BEGIN PRIVATE KEY|AccountKey=[A-Za-z0-9+/=]{50,}'
-          if git grep -nE "$PATTERNS" -- ':!*.md' ; then
+          if git grep -nE "$PATTERNS" -- ':!*.md' ':!.github/**' ; then
             echo '::error::A credential-shaped string is committed. Remove it and rotate the value.'
             exit 1
           fi

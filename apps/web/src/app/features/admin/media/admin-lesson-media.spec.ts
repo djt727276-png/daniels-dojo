@@ -231,15 +231,13 @@ describe('AdminLessonMedia', () => {
 
     choose(fixture, new File(['bytes'], 'master.mp4', { type: 'video/mp4' }));
 
-    http
-      .expectOne(`${VIDEO_URL}/upload`)
-      .flush(
-        {
-          detail: 'The largest accepted upload is smaller than that.',
-          code: 'media.upload_too_large',
-        },
-        { status: 400, statusText: 'Bad Request' },
-      );
+    http.expectOne(`${VIDEO_URL}/upload`).flush(
+      {
+        detail: 'The largest accepted upload is smaller than that.',
+        code: 'media.upload_too_large',
+      },
+      { status: 400, statusText: 'Bad Request' },
+    );
 
     fixture.detectChanges();
 
