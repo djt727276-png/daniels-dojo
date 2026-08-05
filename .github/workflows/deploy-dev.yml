@@ -102,7 +102,18 @@ jobs:
           CONNECTION=$(az keyvault secret show --vault-name "$VAULT" \
             --name sql-connection-string --query value -o tsv)
           export ConnectionStrings__DanielsDojoDatabase="$CONNECTION"
-          dotnet run --project apps/api/src/DanielsDojo.Api -c Release -- database migrate
+
+          # The serverless database auto-pauses; the first connection wakes it and can
+          # time out. Retry a few times rather than failing the deployment on a cold start.
+          for attempt in 1 2 3 4; do
+            if dotnet run --project apps/api/src/DanielsDojo.Api -c Release -- database migrate; then
+              exit 0
+            fi
+            echo "Migration attempt $attempt failed (database may be resuming); retrying in 30s."
+            sleep 30
+          done
+          echo "Migrations failed after 4 attempts."
+          exit 1
 
   deploy:
     name: Deploy API and web
