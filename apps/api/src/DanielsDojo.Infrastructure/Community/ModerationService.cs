@@ -126,6 +126,35 @@ internal sealed class ModerationService : IModerationService
         int categories = await context.ForumCategories
             .CountAsync(category => category.Status == ForumCategoryStatus.Active, cancellationToken);
 
+        DateTimeOffset thirtyDaysAgo = timeProvider.GetUtcNow().AddDays(-30);
+
+        int totalUsers = await context.Users.CountAsync(cancellationToken);
+        int newUsers = await context.Users
+            .CountAsync(user => user.CreatedAtUtc >= thirtyDaysAgo, cancellationToken);
+        int activeMemberships = await context.Subscriptions
+            .CountAsync(s2 => s2.Status == SubscriptionStatus.Active, cancellationToken);
+        int enrollments = await context.Enrollments.CountAsync(cancellationToken);
+        int certificates = await context.Certificates
+            .CountAsync(c => c.RevokedAtUtc == null, cancellationToken);
+
+        int paidOrders = await context.Orders
+            .CountAsync(order => order.Status == OrderStatus.Paid, cancellationToken);
+
+        // Revenue is the sum of genuinely paid orders — never estimates, never pending ones.
+        long revenueMinor = await context.Orders
+            .Where(order => order.Status == OrderStatus.Paid)
+            .SumAsync(order => (long?)order.TotalMinor, cancellationToken) ?? 0;
+
+        int videosReady = await context.LessonVideos
+            .CountAsync(v => v.Status == LessonVideoStatus.Ready, cancellationToken);
+        int videosProcessing = await context.LessonVideos.CountAsync(
+            v => v.Status == LessonVideoStatus.MuxIngesting
+                || v.Status == LessonVideoStatus.Processing
+                || v.Status == LessonVideoStatus.Replacing,
+            cancellationToken);
+        int videosFailed = await context.LessonVideos
+            .CountAsync(v => v.Status == LessonVideoStatus.Failed, cancellationToken);
+
         List<AuditActivityEntry> recent = await context.AuditLogs
             .AsNoTracking()
             .OrderByDescending(entry => entry.OccurredAtUtc)
@@ -154,6 +183,16 @@ internal sealed class ModerationService : IModerationService
             openReports,
             reviewing,
             categories,
+            totalUsers,
+            newUsers,
+            activeMemberships,
+            enrollments,
+            certificates,
+            paidOrders,
+            revenueMinor,
+            videosReady,
+            videosProcessing,
+            videosFailed,
             recent);
     }
 

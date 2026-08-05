@@ -26,6 +26,16 @@ public sealed record AdminOverview(
     int OpenReports,
     int ReviewingReports,
     int ForumCategories,
+    int TotalUsers,
+    int NewUsersLast30Days,
+    int ActiveMemberships,
+    int Enrollments,
+    int CertificatesIssued,
+    int PaidOrders,
+    long RevenueMinor,
+    int VideosReady,
+    int VideosProcessing,
+    int VideosFailed,
     IReadOnlyList<AuditActivityEntry> RecentActivity);
 
 /// <summary>A forum category as the operator manages it, including archived ones.</summary>

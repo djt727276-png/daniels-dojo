@@ -85,6 +85,201 @@ function describeAction(entry: AuditActivityEntry): string {
           <app-stat-card label="Archived courses" [value]="view.archivedCourses" note="Withdrawn" />
         </section>
 
+        <section class="stats" aria-label="Platform">
+          <app-stat-card label="Members" [value]="view.totalUsers" note="All accounts" />
+          <app-stat-card
+            label="New in 30 days"
+            [value]="view.newUsersLast30Days"
+            note="Recently registered"
+          />
+          <app-stat-card
+            label="Active memberships"
+            [value]="view.activeMemberships"
+            note="Provider-verified subscriptions"
+          />
+          <app-stat-card label="Enrollments" [value]="view.enrollments" note="Course starts" />
+        </section>
+
+        <section class="stats" aria-label="Commerce and media">
+          <app-stat-card
+            label="Paid orders"
+            [value]="view.paidOrders"
+            note="Settled by the provider"
+          />
+          <app-stat-card
+            label="Revenue"
+            [value]="'
+          <app-stat-card label="Active offers" [value]="view.activeOffers" note="Purchasable" />
+          <app-stat-card label="Draft offers" [value]="view.draftOffers" note="Not yet on sale" />
+          <app-stat-card
+            label="Open reports"
+            [value]="view.openReports"
+            note="Waiting for a moderator"
+          />
+          <app-stat-card
+            label="Under review"
+            [value]="view.reviewingReports"
+            note="Someone is on it"
+          />
+        </section>
+
+        <section class="dd-stack" aria-labelledby="admin-links-heading">
+          <h2 id="admin-links-heading" class="admin__heading">Where to go</h2>
+
+          <mat-card appearance="outlined">
+            <mat-card-content class="links">
+              <a routerLink="/admin/catalog" data-testid="link-catalog">
+                Catalog — author courses, sections, and lessons
+              </a>
+              <a routerLink="/admin/pricing" data-testid="link-pricing">
+                Pricing — offers and prices held in this database
+              </a>
+              <a routerLink="/admin/community" data-testid="link-moderation">
+                Moderation — {{ view.openReports }} open
+                {{ view.openReports === 1 ? 'report' : 'reports' }} and
+                {{ view.forumCategories }} forum
+                {{ view.forumCategories === 1 ? 'category' : 'categories' }}
+              </a>
+            </mat-card-content>
+          </mat-card>
+        </section>
+
+        <section class="dd-stack" aria-labelledby="admin-activity-heading">
+          <h2 id="admin-activity-heading" class="admin__heading">Recent administrative activity</h2>
+
+          @if (view.recentActivity.length === 0) {
+            <app-empty-state
+              title="Nothing yet"
+              message="Publishing, pricing, and moderation decisions appear here as they happen."
+              data-testid="no-activity"
+            />
+          } @else {
+            <mat-card appearance="outlined">
+              <mat-card-content>
+                <ol class="activity" data-testid="admin-activity">
+                  @for (entry of view.recentActivity; track entry.id) {
+                    <li class="activity__item">
+                      <span class="activity__what">{{ describe(entry) }}</span>
+                      @if (entry.reason) {
+                        <span class="activity__reason">“{{ entry.reason }}”</span>
+                      }
+                      <span class="activity__when">{{ entry.occurredAtUtc | date: 'short' }}</span>
+                    </li>
+                  }
+                </ol>
+              </mat-card-content>
+            </mat-card>
+          }
+        </section>
+      }
+    </div>
+  `,
+  styles: `
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+      gap: var(--dd-space-4);
+    }
+
+    .admin__heading {
+      font-size: var(--dd-text-lg);
+      font-weight: var(--dd-weight-medium);
+    }
+
+    .links {
+      display: flex;
+      flex-direction: column;
+      gap: var(--dd-space-3);
+    }
+
+    .activity {
+      display: flex;
+      flex-direction: column;
+      gap: var(--dd-space-3);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .activity__item {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--dd-space-2);
+      padding-bottom: var(--dd-space-3);
+      border-bottom: 1px solid var(--dd-outline);
+    }
+
+    .activity__item:last-child {
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .activity__what {
+      font-weight: var(--dd-weight-medium);
+    }
+
+    .activity__reason,
+    .activity__when {
+      font-size: var(--dd-text-sm);
+      color: var(--dd-on-surface-variant);
+    }
+
+    .activity__when {
+      margin-left: auto;
+    }
+  `,
+})
+export class Admin {
+  private readonly auth = inject(AuthService);
+  private readonly api = inject(CommunityApi);
+
+  protected readonly describe = describeAction;
+  protected readonly session = this.auth.session;
+
+  protected readonly overview = signal<AdminOverview | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly failed = signal(false);
+  protected readonly errorMessage = signal('');
+
+  constructor() {
+    this.load();
+  }
+
+  protected load(): void {
+    this.loading.set(true);
+    this.failed.set(false);
+
+    this.api.getOverview().subscribe({
+      next: (overview) => {
+        this.loading.set(false);
+        this.overview.set(overview);
+      },
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.failed.set(true);
+        this.errorMessage.set(
+          toApiFailure(error, 'We could not load the administration overview.').message,
+        );
+      },
+    });
+  }
+}
+ + (view.revenueMinor / 100).toFixed(2)"
+            note="Sum of paid orders"
+          />
+          <app-stat-card
+            label="Certificates"
+            [value]="view.certificatesIssued"
+            note="Valid completions"
+          />
+          <app-stat-card
+            label="Videos ready"
+            [value]="view.videosReady"
+            [note]="view.videosProcessing + ' processing · ' + view.videosFailed + ' failed'"
+          />
+        </section>
+
         <section class="stats" aria-label="Pricing and community">
           <app-stat-card label="Active offers" [value]="view.activeOffers" note="Purchasable" />
           <app-stat-card label="Draft offers" [value]="view.draftOffers" note="Not yet on sale" />

@@ -193,6 +193,16 @@ export interface AuditActivityEntry {
 
 /** Everything the Admin landing page needs, in one round trip. */
 export interface AdminOverview {
+  readonly totalUsers: number;
+  readonly newUsersLast30Days: number;
+  readonly activeMemberships: number;
+  readonly enrollments: number;
+  readonly certificatesIssued: number;
+  readonly paidOrders: number;
+  readonly revenueMinor: number;
+  readonly videosReady: number;
+  readonly videosProcessing: number;
+  readonly videosFailed: number;
   readonly draftCourses: number;
   readonly publishedCourses: number;
   readonly archivedCourses: number;
