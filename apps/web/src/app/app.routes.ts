@@ -58,6 +58,53 @@ export const routes: Routes = [
     title: "Community setup — Daniel's Dojo",
   },
   {
+    path: 'pricing',
+    loadComponent: () => import('./features/public/info-pages').then((m) => m.PricingPage),
+    title: "Pricing — Daniel's Dojo",
+  },
+  {
+    path: 'faq',
+    loadComponent: () => import('./features/public/info-pages').then((m) => m.FaqPage),
+    title: "FAQ — Daniel's Dojo",
+  },
+  {
+    path: 'about',
+    loadComponent: () => import('./features/public/info-pages').then((m) => m.AboutPage),
+    title: "About — Daniel's Dojo",
+  },
+  {
+    path: 'contact',
+    loadComponent: () => import('./features/public/info-pages').then((m) => m.ContactPage),
+    title: "Contact — Daniel's Dojo",
+  },
+  {
+    path: 'legal/privacy',
+    loadComponent: () => import('./features/public/legal-pages').then((m) => m.PrivacyPolicy),
+    title: "Privacy policy — Daniel's Dojo",
+  },
+  {
+    path: 'legal/terms',
+    loadComponent: () => import('./features/public/legal-pages').then((m) => m.TermsOfService),
+    title: "Terms of service — Daniel's Dojo",
+  },
+  {
+    path: 'legal/refunds',
+    loadComponent: () => import('./features/public/legal-pages').then((m) => m.RefundPolicy),
+    title: "Refund policy — Daniel's Dojo",
+  },
+  {
+    path: 'legal/community-guidelines',
+    loadComponent: () =>
+      import('./features/public/legal-pages').then((m) => m.CommunityGuidelines),
+    title: "Community guidelines — Daniel's Dojo",
+  },
+  {
+    path: 'legal/accessibility',
+    loadComponent: () =>
+      import('./features/public/legal-pages').then((m) => m.AccessibilityStatement),
+    title: "Accessibility — Daniel's Dojo",
+  },
+  {
     path: 'account',
     loadComponent: () => import('./features/account/account').then((m) => m.Account),
     title: "Your account — Daniel's Dojo",
@@ -170,6 +217,7 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: '',
+    loadComponent: () => import('./features/public/info-pages').then((m) => m.NotFound),
+    title: "Page not found — Daniel's Dojo",
   },
 ];

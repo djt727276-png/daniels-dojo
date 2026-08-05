@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Public, indexable surface only. Course detail pages are added by slug as courses are
+     published; authenticated and administrative routes are deliberately absent. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://yellow-wave-0ef59fd0f.7.azurestaticapps.net/</loc></url>
+  <url><loc>https://yellow-wave-0ef59fd0f.7.azurestaticapps.net/courses</loc></url>
+  <url><loc>https://yellow-wave-0ef59fd0f.7.azurestaticapps.net/pricing</loc></url>
+  <url><loc>https://yellow-wave-0ef59fd0f.7.azurestaticapps.net/about</loc></url>
+  <url><loc>https://yellow-wave-0ef59fd0f.7.azurestaticapps.net/faq</loc></url>
+  <url><loc>https://yellow-wave-0ef59fd0f.7.azurestaticapps.net/contact</loc></url>
+  <url><loc>https://yellow-wave-0ef59fd0f.7.azurestaticapps.net/legal/privacy</loc></url>
+  <url><loc>https://yellow-wave-0ef59fd0f.7.azurestaticapps.net/legal/terms</loc></url>
+</urlset>

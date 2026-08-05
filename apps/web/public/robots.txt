@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /dashboard
+Disallow: /my-learning
+Disallow: /messages
+Disallow: /notifications
+Sitemap: https://yellow-wave-0ef59fd0f.7.azurestaticapps.net/sitemap.xml

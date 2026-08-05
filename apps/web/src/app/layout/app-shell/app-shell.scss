@@ -108,3 +108,12 @@
     max-width: 7rem;
   }
 }
+
+.app-toolbar__theme {
+  margin-right: var(--dd-space-2);
+}
+
+.app-toolbar__theme-glyph {
+  font-size: 1.1rem;
+  line-height: 1;
+}
