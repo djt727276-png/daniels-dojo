@@ -43,15 +43,18 @@ internal sealed class ForumService : IForumService
     private readonly DanielsDojoDbContext context;
     private readonly ICommunityAccessEvaluator accessEvaluator;
     private readonly TimeProvider timeProvider;
+    private readonly IRealtimeNotifier realtime;
 
     public ForumService(
         DanielsDojoDbContext context,
         ICommunityAccessEvaluator accessEvaluator,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IRealtimeNotifier realtime)
     {
         this.context = context;
         this.accessEvaluator = accessEvaluator;
         this.timeProvider = timeProvider;
+        this.realtime = realtime;
     }
 
     // ------------------------------------------------------------------ reading
@@ -365,9 +368,16 @@ internal sealed class ForumService : IForumService
         thread.LastActivityAtUtc = now;
         thread.UpdatedAtUtc = now;
 
-        await NotifySubscribersAsync(threadId, authorUserId, post.Id, now, cancellationToken);
+        List<Guid> notified = await NotifySubscribersAsync(
+            threadId, authorUserId, post.Id, now, cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Persisted first, rung after: recipients refetch their inbox over REST.
+        foreach (Guid recipient in notified)
+        {
+            await realtime.UnreadChangedAsync(recipient, cancellationToken);
+        }
 
         return await BuildThreadAsync(authorUserId, threadId, LastPage(threadId), DefaultPageSize, cancellationToken);
     }
@@ -491,6 +501,7 @@ internal sealed class ForumService : IForumService
             cancellationToken);
 
         DateTimeOffset now = timeProvider.GetUtcNow();
+        Guid? rung = null;
 
         if (liked && existing is null)
         {
@@ -507,6 +518,7 @@ internal sealed class ForumService : IForumService
                 && !await IsBlockedEitherWayAsync(userId, post.AuthorUserId, cancellationToken))
             {
                 AddNotification(post.AuthorUserId, userId, NotificationKind.PostReaction, "Post", postId, now);
+                rung = post.AuthorUserId;
             }
         }
         else if (!liked && existing is not null)
@@ -515,6 +527,11 @@ internal sealed class ForumService : IForumService
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (rung is { } recipient)
+        {
+            await realtime.UnreadChangedAsync(recipient, cancellationToken);
+        }
 
         return await BuildThreadAsync(userId, post.ThreadId, 1, DefaultPageSize, cancellationToken);
     }
@@ -887,8 +904,11 @@ internal sealed class ForumService : IForumService
                 context.DirectMessages.AnyAsync(message => message.Id == targetId, cancellationToken),
         };
 
-    /// <summary>Queues a reply notification for every subscriber except the author.</summary>
-    private async Task NotifySubscribersAsync(
+    /// <summary>
+    /// Queues a reply notification for every subscriber except the author, returning who was
+    /// notified so the caller can ring them after the save commits.
+    /// </summary>
+    private async Task<List<Guid>> NotifySubscribersAsync(
         Guid threadId,
         Guid authorUserId,
         Guid postId,
@@ -905,7 +925,7 @@ internal sealed class ForumService : IForumService
 
         if (subscribers.Count == 0)
         {
-            return;
+            return subscribers;
         }
 
         // A block silences the notification in both directions, so neither member is pulled
@@ -916,10 +936,14 @@ internal sealed class ForumService : IForumService
             .Select(block => block.BlockerUserId == authorUserId ? block.BlockedUserId : block.BlockerUserId)
             .ToListAsync(cancellationToken)];
 
-        foreach (Guid subscriber in subscribers.Where(id => !blocked.Contains(id)))
+        List<Guid> notified = [.. subscribers.Where(id => !blocked.Contains(id))];
+
+        foreach (Guid subscriber in notified)
         {
             AddNotification(subscriber, authorUserId, NotificationKind.ThreadReply, "Post", postId, now);
         }
+
+        return notified;
     }
 
     private void AddNotification(

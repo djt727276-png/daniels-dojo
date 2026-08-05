@@ -389,6 +389,12 @@ public sealed class CheckoutTests(SqlServerDatabaseFixture fixture) : IAsyncLife
         using JsonDocument curriculum = await customer.GetJsonAsync(
             "/api/v1/learning/courses/commerce-course");
         Assert.True(curriculum.RootElement.GetProperty("accessGranted").GetBoolean());
+
+        // The settle wrote exactly one purchase notification alongside the entitlement.
+        await using DanielsDojoDbContext context = fixture.CreateContext();
+        Assert.Equal(1, await context.Notifications.CountAsync(
+            notification => notification.RecipientUserId == _customer.UserId
+                && notification.Kind == Domain.Community.NotificationKind.PurchaseCompleted));
     }
 
     // ---------------------------------------------------------------- helpers

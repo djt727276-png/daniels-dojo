@@ -1,7 +1,9 @@
 using System.Globalization;
 using DanielsDojo.Application.Commerce;
 using DanielsDojo.Application.Common;
+using DanielsDojo.Application.Community;
 using DanielsDojo.Domain.Commerce;
+using DanielsDojo.Domain.Community;
 using DanielsDojo.Domain.Media;
 using DanielsDojo.Infrastructure.Auditing;
 using DanielsDojo.Infrastructure.Persistence;
@@ -31,17 +33,20 @@ internal sealed class CheckoutService : ICheckoutService
     private readonly DanielsDojoDbContext context;
     private readonly IPaymentProvider payments;
     private readonly TimeProvider timeProvider;
+    private readonly IRealtimeNotifier realtime;
     private readonly AuditTrail audit;
 
     public CheckoutService(
         DanielsDojoDbContext context,
         IPaymentProvider payments,
         IOperationContext operationContext,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IRealtimeNotifier realtime)
     {
         this.context = context;
         this.payments = payments;
         this.timeProvider = timeProvider;
+        this.realtime = realtime;
 
         audit = new AuditTrail(context, operationContext, timeProvider);
     }
@@ -384,7 +389,24 @@ internal sealed class CheckoutService : ICheckoutService
                 ["providerMode"] = payments.Mode.ToString(),
             });
 
+        // Written in the same transaction as the order and entitlement it announces, and
+        // only on the single Pending→Paid transition, so a webhook/redirect race cannot
+        // duplicate it.
+        context.Notifications.Add(new Notification
+        {
+            Id = Guid.CreateVersion7(),
+            RecipientUserId = order.UserId,
+            ActorUserId = null,
+            Kind = NotificationKind.PurchaseCompleted,
+            TargetType = nameof(Order),
+            TargetId = order.Id,
+            CreatedAtUtc = now,
+        });
+
         await context.SaveChangesAsync(cancellationToken);
+
+        // Persisted first, rung after: the doorbell only tells the member to go and fetch.
+        await realtime.UnreadChangedAsync(order.UserId, cancellationToken);
     }
 
     /// <summary>

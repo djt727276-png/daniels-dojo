@@ -25,7 +25,8 @@ namespace DanielsDojo.Infrastructure.Learning;
 internal sealed class LearningService(
     DanielsDojoDbContext context,
     ICourseAccessEvaluator access,
-    TimeProvider timeProvider) : ILearningService
+    TimeProvider timeProvider,
+    DanielsDojo.Application.Community.IRealtimeNotifier realtime) : ILearningService
 {
     public async Task<OperationResult<CourseCurriculum>> GetCurriculumAsync(
         Guid? userId,
@@ -576,7 +577,7 @@ internal sealed class LearningService(
             .Select(user => user.DisplayName)
             .SingleAsync(cancellationToken);
 
-        context.Certificates.Add(new Certificate
+        var certificate = new Certificate
         {
             Id = Guid.CreateVersion7(),
             UserId = userId,
@@ -591,6 +592,21 @@ internal sealed class LearningService(
             IssuedAtUtc = now,
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
+        };
+
+        context.Certificates.Add(certificate);
+
+        // Same transaction as the certificate it announces; the unique index below keeps
+        // both single even when two final-lesson completions race.
+        context.Notifications.Add(new Domain.Community.Notification
+        {
+            Id = Guid.CreateVersion7(),
+            RecipientUserId = userId,
+            ActorUserId = null,
+            Kind = Domain.Community.NotificationKind.CourseCompleted,
+            TargetType = nameof(Certificate),
+            TargetId = certificate.Id,
+            CreatedAtUtc = now,
         });
 
         try
@@ -602,7 +618,11 @@ internal sealed class LearningService(
             // Two final-lesson completions raced; the unique (UserId, CourseId) index let one
             // insert win, which is exactly the intended outcome.
             context.ChangeTracker.Clear();
+            return;
         }
+
+        // Persisted first, rung after: the doorbell only says "go and fetch".
+        await realtime.UnreadChangedAsync(userId, cancellationToken);
     }
 
     public async Task<OperationResult<IReadOnlyList<CertificateView>>> ListCertificatesAsync(

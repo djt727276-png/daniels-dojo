@@ -74,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<IModerationService, ModerationService>();
         services.AddScoped<ISocialService, SocialService>();
         services.AddScoped<IAvatarService, AvatarService>();
+        services.AddScoped<IAnnouncementService, AnnouncementService>();
         services.AddScoped<Application.Privacy.IPrivacyService, Privacy.PrivacyService>();
 
         // Realtime is optional infrastructure: the API host replaces this with the SignalR

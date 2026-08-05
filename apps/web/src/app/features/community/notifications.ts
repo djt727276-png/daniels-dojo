@@ -20,17 +20,21 @@ import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-view
 function targetRoute(notification: NotificationView): readonly string[] | null {
   switch (notification.targetType) {
     case 'Post':
-    case 'Thread':
       // A post id has no route of its own, so this lands on the community page where the
       // thread it belongs to is listed under recent discussion.
       return ['/community'];
+    case 'Thread':
+      return ['/community/t', notification.targetId];
     case 'Conversation':
       return ['/messages', notification.targetId];
     case 'FriendRequest':
     case 'Friendship':
       return ['/friends'];
     case 'Profile':
+    case 'Order':
       return ['/account'];
+    case 'Certificate':
+      return ['/certificates'];
     default:
       return null;
   }
@@ -45,7 +49,12 @@ function targetLabel(notification: NotificationView): string {
     case 'Friendship':
       return 'Open friends';
     case 'Profile':
+    case 'Order':
       return 'Open your account';
+    case 'Certificate':
+      return 'See your certificates';
+    case 'Thread':
+      return 'Read the announcement';
     default:
       return 'Open the community';
   }
@@ -68,6 +77,12 @@ function describe(notification: NotificationView): string {
       return `${who} sent you a message.`;
     case 'Moderation':
       return 'A moderator took action on something of yours.';
+    case 'CourseAnnouncement':
+      return 'An announcement was posted for one of your courses.';
+    case 'PurchaseCompleted':
+      return 'Your purchase completed — your access is ready.';
+    case 'CourseCompleted':
+      return 'You finished a course and earned its certificate. Congratulations!';
     default:
       return 'Something happened.';
   }
