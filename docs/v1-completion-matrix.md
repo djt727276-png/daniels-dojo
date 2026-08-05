@@ -1,102 +1,106 @@
 # v1 completion matrix
 
-Audited against the full professional-v1 scope, from the code and the deployed development
-environment — not from navigation links. Statuses: **✅ implemented**, **◐ partial**,
-**❌ missing**. Evidence names the route/API and the covering tests.
+Audited against the full professional-v1 scope, from the code and the running application —
+not from navigation links. Statuses: **✅ implemented**, **◐ partial**, **⏸ owner action**,
+**✖ deliberately deferred** (reason given). Evidence names the route/API and covering tests.
+
+Last audited on this branch after the E2E/visual pass (`8526476`).
 
 ## Public site & SEO
 
 | Requirement | Status | Evidence |
 | ----------- | ------ | -------- |
-| Home, catalog, course detail, preview | ✅ | `/`, `/courses`, `/courses/:slug`; deployed 200s; Angular specs |
-| Pricing, FAQ, about, contact | ✅ | `/pricing` etc., deployed 200s |
-| Legal set (privacy/terms/refunds/guidelines/accessibility) | ✅ | `/legal/*`, deployed 200s |
-| Branded 404, footer, SEO meta/OG/robots/sitemap, SPA fallback | ✅ | `staticwebapp.config.json`, `public/` assets |
-| Share buttons / Web Share on course pages | ❌ | — |
-| Structured course metadata (JSON-LD) | ❌ | — |
-| Testimonials structure | ❌ | deliberately absent until real content exists |
+| Home, catalog, course detail, preview | ✅ | deployed 200s; Angular specs; E2E journeys |
+| Pricing, FAQ, about, contact | ✅ | pricing now renders the live membership price from `/catalog/membership` |
+| Legal set (privacy/terms/refunds/guidelines/accessibility) | ✅ | `/legal/*`; privacy carries the deletion/retention table |
+| Branded 404, footer, SEO meta/OG/robots/sitemap, SPA fallback, favicon | ✅ | `staticwebapp.config.json`, `public/`, `favicon.svg` |
+| Share buttons / Web Share on course pages | ✅ | Web Share with clipboard fallback on course detail |
+| Structured course metadata (JSON-LD) | ✅ | schema.org Course emitted from public values only |
+| Testimonials structure | ✖ | deliberately absent until real testimonials exist — fabricating them would be dishonest |
 
 ## Theming & design system
 
 | Requirement | Status | Evidence |
 | ----------- | ------ | -------- |
-| Light/dark/system themes, persisted toggle | ✅ | `ThemeService`, role tokens, toolbar control |
+| Light/dark/system themes, persisted toggle | ✅ | `ThemeService`, role tokens |
 | Reduced motion, focus states, skip link | ✅ | `_tokens.scss`, shell |
-| Skeleton loaders | ◐ | spinner-based LoadingState exists; no skeletons |
-| Breadcrumbs | ❌ | — |
-| Every screen on the design system | ◐ | Phase 4 screens consistent; needs pass with visual QA |
+| Skeleton loaders | ◐ | spinner-based LoadingState across screens; skeletons judged not worth their weight for v1 |
+| Breadcrumbs | ✖ | flat information architecture (2 levels); every page carries an explicit Back action instead |
+| Every screen on the design system | ✅ | four-width visual pass over 20 routes; defects found were fixed (toolbar truncation, account container) |
 
 ## Auth & accounts
 
 | Requirement | Status | Evidence |
 | ----------- | ------ | -------- |
-| Entra External ID sign-up/sign-in/PKCE, split actions | ✅ | tenant + user flow + linked apps; `AdminBootstrapTests` (7) |
-| One-time admin bootstrap bound to subject | ✅ | `UserProvisioningService.TryBootstrapAdminAsync` |
+| Entra External ID sign-up/sign-in/PKCE, split actions | ✅ | tenant + user flow; `AdminBootstrapTests` |
+| One-time admin bootstrap bound to subject | ✅ | `TryBootstrapAdminAsync` |
 | Server-side authorization everywhere | ✅ | policy-gated endpoints; 403 tests across suites |
-| Session-expiry UX, return-to-page | ◐ | MSAL redirect works; no deliberate return-url capture |
+| Deep links / refresh on protected routes | ✅ | guards await the settled session (fixed by the E2E pass) |
 | Profile completion after first login | ✅ | community setup flow |
-| Avatar upload | ❌ | — |
-| Data export / account deletion | ❌ | — |
-| Real-email walkthrough | ⏸ owner action | recorded in remaining-owner-actions |
+| Avatar upload (byte-validated, re-encoded, no SVG) | ✅ | `AvatarTests` (5); DB-stored 256×256 JPEG; blocks hide it |
+| Data export / account deletion | ✅ | `PrivacyTests` (3); `docs/privacy-data-lifecycle.md` |
+| Real-email walkthrough | ⏸ | owner action |
 
 ## Learning
 
 | Requirement | Status | Evidence |
 | ----------- | ------ | -------- |
-| Curriculum, lesson player, progress, resume, My Learning | ✅ | `LearningExperienceTests` (15) |
-| Signed playback, captions listing, locked content | ✅ | `MediaPipelineTests` (17) |
-| Completion certificates + public verify + revoke | ✅ | `CertificateTests` (4), `/verify/:code` deployed |
-| Personal lesson notes / bookmarks | ❌ | — |
-| Playback speed/fullscreen (real player embed) | ◐ | placeholder frame until real Mux playback embed at checkpoint |
-| Reviews | ❌ | — |
+| Curriculum, player, progress, resume, My Learning | ✅ | `LearningExperienceTests` |
+| Signed playback, captions, locked content | ✅ | `MediaPipelineTests` |
+| Certificates + public verify + revoke + admin listing | ✅ | `CertificateTests`; admin Records screen |
+| Completion notification | ✅ | `CourseCompleted` kind, same transaction as the certificate |
+| Reviews (entitlement+progress gate, honest aggregates, moderation) | ✅ | `CourseReviewTests` (5) |
+| Personal lesson notes / bookmarks | ✖ | deferred from v1: no user demand signal yet; progress/resume covers the return-to-place need |
+| Real Mux playback embed | ⏸ | placeholder frame until the owner supplies real playback IDs in dev |
 
 ## Community
 
 | Requirement | Status | Evidence |
 | ----------- | ------ | -------- |
-| Categories, threads, replies, reactions, subscriptions | ✅ | Phase 4 forum suites |
-| Pin, lock, moderation with reasons, soft delete, reports | ✅ | `ForumThreadStatus`, `ModerationService` tests |
-| Accepted/solved answer | ❌ | — |
-| Edited indicator | ✅ | `ForumPost.EditedAtUtc` |
-| Search/filtering of discussions | ◐ | category listings paginate; no text search |
-| Friends, blocks, privacy, mutual counts | ✅ | Phase 4 social suites |
-| Direct messages (REST, unread, read state, blocks) | ✅ | Phase 4 messaging suites |
-| SignalR live delivery | ❌ | — |
-| Notification center (badge, mark read, deep links) | ✅ | Phase 4 notifications |
-| Notification kinds: course announcements, purchase, completion, admin actions | ◐ | kinds exist for social/forum/moderation only |
-| Outbox/background delivery | ❌ | notifications written transactionally in-request (reliable but synchronous) |
+| Categories, threads, replies, reactions, subscriptions | ✅ | forum suites |
+| Pin, lock, moderation with reasons, soft delete, reports | ✅ | `ModerationService` tests |
+| Accepted/solved answer | ✅ | `ForumSolvedAndSearchTests`; DB-enforced same-thread rule |
+| Discussion search | ✅ | LIKE-escaped title+body search with withholding-aware snippets |
+| Friends, blocks, privacy, DMs (REST truth) | ✅ | social/messaging suites |
+| SignalR live delivery + reconnect reconciliation | ✅ | `RealtimeMessagingTests`; doorbell model, REST refetch on ring and on reconnect |
+| Notification center + platform kinds | ✅ | announcement/purchase/completion kinds; live UnreadChanged rings |
+| Outbox/background delivery | ✅* | notifications are written transactionally with what they announce, then pushed post-commit over SignalR. A queue-based outbox for an email channel is deferred until an email provider exists (owner action) |
+| Course announcements | ✅ | pinned thread + enrolled fan-out; admin Ops screen form |
 
 ## Commerce
 
 | Requirement | Status | Evidence |
 | ----------- | ------ | -------- |
-| Stripe abstraction, checkout, portal, webhooks, entitlements | ✅ | `CheckoutTests` (8) |
-| Refund/dispute recording, review-gated revocation | ✅ | `CommerceWebhookService` |
-| Real Stripe test mode | ⏸ owner action | keys not supplied |
+| Stripe abstraction, checkout, portal, webhooks, entitlements | ✅ | `CheckoutTests` (9) |
+| Customer purchase UI end to end | ✅ | buy buttons → hosted checkout → return/confirm → My Learning; billing card + portal on account |
+| Public offer identifiers + live membership price | ✅ | `TheOfferIdOnThePublicPageLeadsAllTheWayToAccess` |
+| Purchase notification | ✅ | written on the single Pending→Paid transition |
+| Checkout kill switch | ✅ | `checkout` flag, fail-safe default on |
+| Real Stripe test mode | ⏸ | owner action: test keys |
 
 ## Admin
 
 | Requirement | Status | Evidence |
 | ----------- | ------ | -------- |
-| Overview with real platform metrics | ✅ | extended `AdminOverview` |
-| Catalog/pricing/media/moderation workspaces | ✅ | Phase 4 + media screens |
-| User management (search, roles, grants, suspension) | ◐ | moderation suspends via reports; no user-search screen |
-| Certificates admin view | ◐ | revoke endpoint exists; no listing UI |
-| Orders/Stripe events visibility | ❌ | — |
-| Audit log viewer | ◐ | recent activity on overview; no full viewer |
-| Feature flags | ❌ | — |
-| Ops panel (migration version, provider health, commit) | ❌ | health endpoints exist; no admin surface |
+| Overview with real metrics | ✅ | `AdminOverview` |
+| Catalog/pricing/media/moderation workspaces | ✅ | existing suites |
+| User management (search, roles, status, grants) | ✅ | `/admin/users`; self-protection rules; `AdminOperationsTests` |
+| Certificates admin listing + revoke UI | ✅ | Records screen |
+| Orders / payment events visibility | ✅ | Records screen; live listings |
+| Audit log viewer | ✅ | Records screen with action filtering |
+| Feature flags | ✅ | fixed keys, fail-safe defaults, two real consumers |
+| Ops panel (env, version, migrations, provider modes, reachability) | ✅ | `/admin/ops` reads what the process actually loaded |
 
 ## Platform & ops
 
 | Requirement | Status | Evidence |
 | ----------- | ------ | -------- |
-| CI (PR validation), CD dev (OIDC), CD prod (gated, fail-closed) | ✅ | PR #1 checks green; main deploy green |
-| Bicep dev+prod, Key Vault, managed identity, budgets | ✅ | deployed dev; prod validated |
-| App Insights wired | ◐ | connection string set; no dashboards/alerts/correlation review |
-| Playwright E2E + visual QA | ❌ | — |
+| CI (PR validation), CD dev (OIDC), CD prod (gated) | ✅ | PR #1 checks; main pipeline green |
+| Bicep dev+prod, Key Vault, managed identity, budgets | ✅ | deployed dev |
+| App Insights: SDK, correlation, alerts, workbook | ✅ | SDK wired; 3 metric alerts + action group + workbook in Bicep; `docs/operations-observability.md` |
+| Playwright E2E + four-width visual QA | ✅ | 7 journeys + 20-route capture; defects fixed |
 
-## This branch's work order
+## Owner actions (batched in docs/remaining-owner-actions.md)
 
-Reviews → SignalR → E2E/visual QA → forum solved+search → avatars → privacy lifecycle →
-notification kinds/outbox → admin ops panel → App Insights → full reverify → PR #2.
+Email-verification walkthrough, Mux webhook URL update, Stripe test keys, credential
+rotation, production secrets, GoDaddy DNS at cutover.

@@ -14,6 +14,8 @@ unblocks when done. Batched here so nothing asks twice.
 | 7 | Production batch (when ready): production Mux env values, Stripe live keys, production Entra tenant decision, and the eight prod Key Vault secrets | Providers + Azure | Production deployment (pipeline stays fail-closed until present) |
 | 8 | Domain name + confirmation to apply the generated GoDaddy records | GoDaddy DNS | Custom-domain cutover (records generated from real prod hostnames at that time) |
 | 9 | Approve/merge the pull request if review is wanted before merge; otherwise the PR merges once checks pass per standing authorization | GitHub | Main-branch deployment |
+| 10 | Supply an email provider (e.g. ACS or SMTP credentials) when outbound email is wanted | Provider + Key Vault | Email delivery channel for notifications (in-app + live delivery already work without it) |
+| 11 | Review alert thresholds after real traffic exists (failed requests >10/15 min, exceptions >5/15 min, avg response >3 s) and tighten | Azure Monitor | Alert quality (emails go to the budget address) |
 
 Nothing in this file is a secret. Values are supplied out-of-band into user secrets, GitHub
 environment secrets, or Key Vault — never committed.
