@@ -24,21 +24,21 @@ $min-supported-width: 20rem; // 320px
   /* --- Brand palette ------------------------------------------------------
      Deep navy/indigo primary, restrained violet tertiary, warm amber reserved
      exclusively for achievement/progress so it keeps its meaning. */
-  --dd-primary: #26418f;
-  --dd-primary-hover: #1d3372;
-  --dd-primary-container: #dde3f8;
+  --dd-primary: #3445c4;
+  --dd-primary-hover: #2938a8;
+  --dd-primary-container: #dfe3fc;
   --dd-on-primary: #ffffff;
-  --dd-on-primary-container: #101b3f;
+  --dd-on-primary-container: #111a52;
 
   --dd-tertiary: #5b4b8a;
   --dd-tertiary-container: #e8e2f5;
   --dd-on-tertiary: #ffffff;
   --dd-on-tertiary-container: #241c3d;
 
-  --dd-accent: #b26a00;
-  --dd-accent-container: #ffeccc;
+  --dd-accent: #9c6b00;
+  --dd-accent-container: #f9e9c6;
   --dd-on-accent: #ffffff;
-  --dd-on-accent-container: #3d2400;
+  --dd-on-accent-container: #3a2800;
 
   /* --- Neutral surfaces --------------------------------------------------- */
   --dd-background: #f6f7fb;
@@ -137,5 +137,69 @@ $min-supported-width: 20rem; // 320px
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Dark theme — the technology-meets-dojo identity's night face.
+
+   The same role tokens, re-declared. Charcoal/ink surfaces, an electric
+   indigo primary that reads as light-on-dark, and the gold accent warmed so
+   achievement still glows. Components change nothing: they only ever read
+   roles.
+
+   Two selectors carry it: an explicit choice via [data-theme='dark'], and the
+   operating-system preference when the visitor has not chosen ('system' or no
+   attribute). [data-theme='light'] therefore always wins over the OS.
+   ------------------------------------------------------------------------- */
+
+@mixin dd-dark-roles {
+  --dd-primary: #93a4ff;
+  --dd-primary-hover: #aab7ff;
+  --dd-primary-container: #2a3480;
+  --dd-on-primary: #0d144d;
+  --dd-on-primary-container: #dfe3ff;
+
+  --dd-tertiary: #c5b4f2;
+  --dd-tertiary-container: #43356b;
+  --dd-on-tertiary: #2a1e4d;
+  --dd-on-tertiary-container: #e8e0fa;
+
+  --dd-accent: #eebd55;
+  --dd-accent-container: #4d3a08;
+  --dd-on-accent: #2d2100;
+  --dd-on-accent-container: #ffe9b8;
+
+  --dd-background: #0f1117;
+  --dd-surface: #161923;
+  --dd-surface-variant: #1f2330;
+  --dd-surface-raised: #1b1f2b;
+  --dd-on-surface: #e6e8f0;
+  --dd-on-surface-variant: #a9afc3;
+  --dd-outline: #333a4e;
+  --dd-outline-strong: #4d5570;
+
+  --dd-success: #74d69b;
+  --dd-success-container: #14331f;
+  --dd-warning: #ffc76e;
+  --dd-warning-container: #3d2c05;
+  --dd-danger: #ff9d95;
+  --dd-danger-container: #45100b;
+  --dd-info: #83cdec;
+  --dd-info-container: #0f2f3d;
+
+  /* Shadows barely read on ink; depth comes from raised surfaces instead. */
+  --dd-elevation-1: 0 1px 2px rgb(0 0 0 / 35%);
+  --dd-elevation-2: 0 2px 8px rgb(0 0 0 / 40%);
+  --dd-elevation-3: 0 8px 24px rgb(0 0 0 / 50%);
+}
+
+:root[data-theme='dark'] {
+  @include dd-dark-roles;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dd-dark-roles;
   }
 }

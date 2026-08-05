@@ -23,6 +23,32 @@
 
   <span class="app-toolbar__spacer"></span>
 
+  <!-- One control, three states: system, dark, light. The glyph mirrors the current
+       preference; the label always says what pressing it does next. -->
+  <button
+    matIconButton
+    type="button"
+    class="app-toolbar__theme"
+    [attr.aria-label]="theme.nextLabel()"
+    [matTooltip]="theme.nextLabel()"
+    (click)="theme.cycle()"
+    data-testid="theme-toggle"
+  >
+    <span aria-hidden="true" class="app-toolbar__theme-glyph">
+      @switch (theme.preference()) {
+        @case ('dark') {
+          ◒
+        }
+        @case ('light') {
+          ☀
+        }
+        @default {
+          ◐
+        }
+      }
+    </span>
+  </button>
+
   @if (session(); as current) {
     <button
       matButton
@@ -120,5 +146,6 @@
     <main id="main-content" class="app-main" tabindex="-1">
       <router-outlet />
     </main>
+    <app-footer />
   </mat-sidenav-content>
 </mat-sidenav-container>

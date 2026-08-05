@@ -25,7 +25,12 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "outputPath": "dist/daniels-dojo-web",
-            "assets": [],
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "public"
+              }
+            ],
             "styles": ["src/styles.scss"]
           },
           "configurations": {

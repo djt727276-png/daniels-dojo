@@ -86,7 +86,7 @@ internal static class TestEntities
         LessonId = lessonId,
         MuxAssetId = assetId,
         MuxPlaybackId = playbackId,
-        Status = LessonVideoStatus.Pending,
+        Status = LessonVideoStatus.Requested,
         CreatedAtUtc = Now,
         UpdatedAtUtc = Now,
     };

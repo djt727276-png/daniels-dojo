@@ -1,0 +1,69 @@
+// The isolated Daniel's Dojo production environment.
+//
+// Deployed into its own resource group (daniels-dojo-prod-rg) with its own SQL server and
+// database, its own Key Vault, its own registry, its own identities, and its own media
+// storage (media.bicep alongside this file). Nothing is shared with development, and no
+// development credential works here: every secret is a separate production value set in this
+// environment's vault.
+
+targetScope = 'resourceGroup'
+
+@description('Azure region.')
+param location string = resourceGroup().location
+
+@description('Region for the SQL logical server, when the group region has no SQL capacity.')
+param sqlLocation string = location
+
+@description('SQL logical server name override, for a regional retry after a reserved name.')
+param sqlServerName string = ''
+
+@description('SQL administrator password. Supplied at deployment time, stored only in Key Vault.')
+@secure()
+param sqlAdminPassword string
+
+@description('Entra admin display name for SQL.')
+param sqlEntraAdminLogin string
+
+@description('Entra admin object ID for SQL.')
+param sqlEntraAdminObjectId string
+
+@description('Full image reference for the API. The same verified digest that passed in dev.')
+param apiImage string = ''
+
+@description('Email address that receives budget alerts.')
+param budgetAlertEmail string
+
+@description('Production media storage account name, from the prod media.bicep deployment.')
+param mediaStorageAccountName string = ''
+
+@description('Exact production browser origins. Extended with the custom domain at cutover.')
+param corsOrigins array = []
+
+module platform '../../modules/platform.bicep' = {
+  name: 'daniels-dojo-prod-platform'
+  params: {
+    location: location
+    environmentName: 'prod'
+    sqlLocation: sqlLocation
+    sqlServerName: sqlServerName
+    sqlAdminPassword: sqlAdminPassword
+    sqlEntraAdminLogin: sqlEntraAdminLogin
+    sqlEntraAdminObjectId: sqlEntraAdminObjectId
+    corsOrigins: corsOrigins
+    apiImage: apiImage
+    mediaStorageAccountName: mediaStorageAccountName
+    deployApiApp: apiImage != ''
+    monthlyBudgetUsd: 25
+    budgetAlertEmail: budgetAlertEmail
+  }
+}
+
+output sqlServerFqdn string = platform.outputs.sqlServerFqdn
+output databaseName string = platform.outputs.databaseName
+output keyVaultName string = platform.outputs.keyVaultName
+output requiredSecretNames array = platform.outputs.requiredSecretNames
+output registryLoginServer string = platform.outputs.registryLoginServer
+output apiIdentityPrincipalId string = platform.outputs.apiIdentityPrincipalId
+output apiFqdn string = platform.outputs.apiFqdn
+output staticWebHostname string = platform.outputs.staticWebHostname
+output staticWebName string = platform.outputs.staticWebName

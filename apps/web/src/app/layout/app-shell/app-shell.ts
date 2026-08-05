@@ -6,10 +6,13 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { ThemeService } from '../../core/configuration/theme.service';
+import { AppFooter } from '../app-footer/app-footer';
 import { DevAuthBanner } from '../dev-auth-banner/dev-auth-banner';
 
 /** One entry in the primary navigation. */
@@ -38,17 +41,20 @@ interface NavItem {
     RouterLinkActive,
     RouterOutlet,
     MatToolbarModule,
+    MatTooltipModule,
     MatSidenavModule,
     MatButtonModule,
     MatMenuModule,
     MatDividerModule,
     DevAuthBanner,
+    AppFooter,
   ],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss',
 })
 export class AppShell {
   private readonly auth = inject(AuthService);
+  protected readonly theme = inject(ThemeService);
   private readonly breakpoints = inject(BreakpointObserver);
 
   protected readonly productName = "Daniel's Dojo";

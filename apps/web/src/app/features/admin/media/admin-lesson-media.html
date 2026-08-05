@@ -1,0 +1,204 @@
+<app-page-header
+  title="Lesson video"
+  description="Upload the master, prove it survived the trip, and sign it off before you delete your local copy."
+/>
+
+@switch (state().kind) {
+  @case ('loading') {
+    <app-loading-state message="Loading the lesson's video…" />
+  }
+  @case ('error') {
+    <app-error-state [message]="stateMessage()" (retry)="load()" />
+  }
+  @default {
+    @if (video(); as current) {
+      <div class="media">
+        @if (busy(); as work) {
+          <div class="media__busy" role="status">
+            <p>{{ work }}</p>
+            <mat-progress-bar mode="indeterminate" />
+          </div>
+        }
+
+        @if (notice(); as message) {
+          <p class="media__notice" role="status">{{ message }}</p>
+        }
+
+        @if (failure(); as message) {
+          <p class="media__failure" role="alert">{{ message }}</p>
+        }
+
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <div class="media__status">
+              <app-status-chip
+                [label]="current.status"
+                [tone]="tone(current.status)"
+                srPrefix="Video status"
+              />
+              <p class="media__explain">{{ describe(current.status) }}</p>
+            </div>
+
+            <dl class="media__facts">
+              <div>
+                <dt>Provider</dt>
+                <dd>{{ current.providerMode }}</dd>
+              </div>
+              @if (current.durationSeconds !== null) {
+                <div>
+                  <dt>Duration</dt>
+                  <dd>{{ current.durationSeconds }} seconds</dd>
+                </div>
+              }
+              @if (current.aspectRatio) {
+                <div>
+                  <dt>Aspect ratio</dt>
+                  <dd>{{ current.aspectRatio }}</dd>
+                </div>
+              }
+              @if (current.failureCode) {
+                <div>
+                  <dt>Failure</dt>
+                  <dd>{{ current.failureCode }}</dd>
+                </div>
+              }
+            </dl>
+
+            <div class="media__actions">
+              <label class="media__upload" matButton="filled">
+                {{ current.status === 'None' ? 'Upload master video' : 'Replace master video' }}
+                <input
+                  class="dd-visually-hidden"
+                  type="file"
+                  [accept]="acceptedTypes"
+                  (change)="upload($event)"
+                />
+              </label>
+
+              <button matButton="outlined" type="button" (click)="verify()">
+                Verify the stored file
+              </button>
+
+              <button
+                matButton="outlined"
+                type="button"
+                [disabled]="!current.isPlayable"
+                (click)="play()"
+              >
+                Play it back
+              </button>
+
+              <button matButton="outlined" type="button" (click)="refreshFromProvider()">
+                Refresh from provider
+              </button>
+            </div>
+
+            @if (current.status === 'Replacing') {
+              <p class="media__explain">
+                Students keep watching the current video for as long as the replacement is
+                processing. If the replacement fails, this lesson stays exactly where it is.
+              </p>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Before you delete your local copy</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <ol class="checks">
+              @for (step of steps(); track step.label) {
+                <li class="checks__item" [class.checks__item--done]="step.done">
+                  <span class="checks__mark" aria-hidden="true">{{ step.done ? '✓' : '•' }}</span>
+                  <span class="checks__body">
+                    <span class="checks__label">
+                      <span class="dd-visually-hidden">{{
+                        step.done ? 'Passed: ' : 'Not yet passed: '
+                      }}</span>
+                      {{ step.label }}
+                    </span>
+                    <span class="checks__detail">{{ step.detail }}</span>
+                  </span>
+                </li>
+              }
+            </ol>
+
+            @if (safeToDelete()) {
+              <p class="checks__verdict checks__verdict--safe" role="status">
+                Every check has passed. This lesson's master is stored, reads back byte for byte,
+                plays for both you and a student, and you have confirmed it is the right footage.
+                Your local original is now a second copy rather than the only one.
+              </p>
+            } @else {
+              <p class="checks__verdict">
+                Keep your local original until every check above has passed. Nothing here deletes a
+                file on your machine — that is always your decision.
+              </p>
+
+              @if (
+                current.verification.providerReady && !current.verification.humanSpotCheckAtUtc
+              ) {
+                <button matButton="filled" type="button" (click)="spotCheck()">
+                  I have watched it and it is the right footage
+                </button>
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+
+        @if (current.currentSource; as source) {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>Stored master</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <dl class="media__facts">
+                <div>
+                  <dt>Size</dt>
+                  <dd>{{ bytes(source.contentLength) }}</dd>
+                </div>
+                <div>
+                  <dt>Type</dt>
+                  <dd>{{ source.contentType }}</dd>
+                </div>
+                <div>
+                  <dt>State</dt>
+                  <dd>{{ source.state }}</dd>
+                </div>
+                @if (source.checksumSha256) {
+                  <div>
+                    <dt>SHA-256</dt>
+                    <dd class="media__hash">{{ source.checksumSha256 }}</dd>
+                  </div>
+                }
+              </dl>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        @if (current.incomingSource) {
+          <p class="media__explain">
+            A replacement master is stored and being processed. The previous one stays exactly where
+            it is and is never overwritten.
+          </p>
+        }
+
+        @if (preview(); as grant) {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>Preview issued</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <p class="media__explain">
+                A viewing authorisation for <code>{{ grant.playbackId }}</code> was issued and
+                expires at {{ grant.expiresAtUtc }}. The token itself is deliberately not shown or
+                stored — it is requested fresh each time somebody presses play.
+              </p>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+  }
+}

@@ -275,6 +275,11 @@ public sealed class AdminCatalogTests(SqlServerDatabaseFixture fixture) : IAsync
                 Id = Guid.NewGuid(),
                 LessonId = videoLesson.Id,
                 Status = LessonVideoStatus.Ready,
+
+                // Ready means a student can press play, so the schema insists there is
+                // something to play. A row without this is rejected by the database.
+                MuxAssetId = "asset-publishable",
+                MuxPlaybackId = "playback-publishable",
                 DurationSeconds = 300,
                 CreatedAtUtc = DateTimeOffset.UtcNow,
                 UpdatedAtUtc = DateTimeOffset.UtcNow,

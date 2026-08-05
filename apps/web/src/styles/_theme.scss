@@ -15,7 +15,18 @@
 @use '@angular/material' as mat;
 
 html {
-  color-scheme: light;
+  /* Both schemes declared; the attribute (or the OS, when no choice is stored) picks. This
+     is what keeps native controls, scrollbars, and Material system tokens in step with the
+     role tokens swapped in _tokens.scss. */
+  color-scheme: light dark;
+
+  &[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  &[data-theme='dark'] {
+    color-scheme: dark;
+  }
 
   @include mat.theme(
     (

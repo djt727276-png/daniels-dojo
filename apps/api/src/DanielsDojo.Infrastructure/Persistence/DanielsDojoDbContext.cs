@@ -4,6 +4,7 @@ using DanielsDojo.Domain.Commerce;
 using DanielsDojo.Domain.Community;
 using DanielsDojo.Domain.Identity;
 using DanielsDojo.Domain.Learning;
+using DanielsDojo.Domain.Media;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -93,6 +94,9 @@ public sealed class DanielsDojoDbContext(DbContextOptions<DanielsDojoDbContext> 
     /// <summary>Per-lesson progress.</summary>
     public DbSet<LessonProgress> LessonProgress => Set<LessonProgress>();
 
+    /// <summary>Course-completion certificates.</summary>
+    public DbSet<Certificate> Certificates => Set<Certificate>();
+
     /// <summary>Community profiles.</summary>
     public DbSet<CommunityProfile> CommunityProfiles => Set<CommunityProfile>();
 
@@ -134,6 +138,15 @@ public sealed class DanielsDojoDbContext(DbContextOptions<DanielsDojoDbContext> 
 
     /// <summary>Member reports awaiting or past moderation.</summary>
     public DbSet<Report> Reports => Set<Report>();
+
+    /// <summary>Authorisations to write exactly one blob.</summary>
+    public DbSet<MediaUploadSession> MediaUploadSessions => Set<MediaUploadSession>();
+
+    /// <summary>Verified exact-source objects in blob storage.</summary>
+    public DbSet<MediaSource> MediaSources => Set<MediaSource>();
+
+    /// <summary>Caption tracks attached to video lessons.</summary>
+    public DbSet<MediaCaptionTrack> MediaCaptionTracks => Set<MediaCaptionTrack>();
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)

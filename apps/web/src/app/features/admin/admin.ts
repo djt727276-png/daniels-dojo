@@ -85,6 +85,44 @@ function describeAction(entry: AuditActivityEntry): string {
           <app-stat-card label="Archived courses" [value]="view.archivedCourses" note="Withdrawn" />
         </section>
 
+        <section class="stats" aria-label="Platform">
+          <app-stat-card label="Members" [value]="view.totalUsers" note="All accounts" />
+          <app-stat-card
+            label="New in 30 days"
+            [value]="view.newUsersLast30Days"
+            note="Recently registered"
+          />
+          <app-stat-card
+            label="Active memberships"
+            [value]="view.activeMemberships"
+            note="Provider-verified subscriptions"
+          />
+          <app-stat-card label="Enrollments" [value]="view.enrollments" note="Course starts" />
+        </section>
+
+        <section class="stats" aria-label="Commerce and media">
+          <app-stat-card
+            label="Paid orders"
+            [value]="view.paidOrders"
+            note="Settled by the provider"
+          />
+          <app-stat-card
+            label="Revenue"
+            [value]="revenue(view.revenueMinor)"
+            note="Sum of paid orders"
+          />
+          <app-stat-card
+            label="Certificates"
+            [value]="view.certificatesIssued"
+            note="Valid completions"
+          />
+          <app-stat-card
+            label="Videos ready"
+            [value]="view.videosReady"
+            [note]="view.videosProcessing + ' processing · ' + view.videosFailed + ' failed'"
+          />
+        </section>
+
         <section class="stats" aria-label="Pricing and community">
           <app-stat-card label="Active offers" [value]="view.activeOffers" note="Purchasable" />
           <app-stat-card label="Draft offers" [value]="view.draftOffers" note="Not yet on sale" />
@@ -221,6 +259,11 @@ export class Admin {
 
   constructor() {
     this.load();
+  }
+
+  /** Whole-dollar presentation of summed paid orders. */
+  protected revenue(minor: number): string {
+    return '$' + (minor / 100).toFixed(2);
   }
 
   protected load(): void {

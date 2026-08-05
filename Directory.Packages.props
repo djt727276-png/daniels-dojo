@@ -38,6 +38,42 @@
     <PackageVersion Include="Microsoft.Identity.Web" Version="4.14.2" />
   </ItemGroup>
 
+  <ItemGroup Label="Cloud media (Phase 5)">
+    <!--
+      Exact-source storage. The browser uploads straight to Azure with a short-lived,
+      write-only, single-blob SAS, so the original never passes through the API and never
+      lands on a second local disk.
+    -->
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
+    <!--
+      Managed identity in Azure, developer credentials locally. Preferred over an account
+      key because a user delegation SAS is signed by an Entra identity that can be revoked,
+      where a leaked account key cannot.
+    -->
+    <PackageVersion Include="Azure.Identity" Version="1.17.2" />
+    <!-- Binding and start-time validation for the provider option sections. -->
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.10" />
+    <!--
+      Typed HttpClient for the video provider. Infrastructure deliberately does not take a
+      framework reference on ASP.NET Core, so the factory comes from its own package.
+    -->
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.10" />
+    <!--
+      Mux is reached over its documented REST surface through a typed HttpClient rather than
+      the generated SDK: the pipeline needs five calls, and signed playback tokens are issued
+      from the Microsoft.IdentityModel stack that authentication already brings in.
+    -->
+  </ItemGroup>
+
+  <ItemGroup Label="Commerce (Phase 5)">
+    <!--
+      Stripe server-side SDK. Infrastructure-only, like every provider SDK: Application sees
+      IPaymentProvider and nothing else, and no key ever reaches Angular or a tracked file.
+    -->
+    <PackageVersion Include="Stripe.net" Version="52.2.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Database test toolchain (Phase 2)">
     <!-- Real SQL Server for schema/constraint tests. No SQLite or InMemory provider. -->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.13.0" />

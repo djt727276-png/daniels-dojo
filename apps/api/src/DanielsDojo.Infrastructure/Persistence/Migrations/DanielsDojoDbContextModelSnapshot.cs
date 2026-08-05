@@ -354,6 +354,9 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("LessonId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("MediaSourceId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("MediaType")
                         .IsRequired()
                         .HasMaxLength(128)
@@ -387,6 +390,8 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("UX_LessonResources_BlobObjectName")
                         .HasFilter("[BlobObjectName] IS NOT NULL");
 
+                    b.HasIndex("MediaSourceId");
+
                     b.HasIndex("LessonId", "SortOrder")
                         .HasDatabaseName("IX_LessonResources_LessonId_SortOrder");
 
@@ -405,26 +410,76 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("AdminPlaybackVerifiedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("AspectRatio")
+                        .HasMaxLength(16)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(16)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid?>("CurrentSourceId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int?>("DurationSeconds")
                         .HasColumnType("int");
 
                     b.Property<string>("FailureCode")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset?>("HumanSpotCheckAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid?>("HumanSpotCheckByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("IncomingSourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsSignedPlayback")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastKnownGoodAssetId")
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("LastKnownGoodPlaybackId")
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<DateTimeOffset?>("LastProviderEventAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
 
                     b.Property<Guid>("LessonId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("MuxAssetId")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
 
                     b.Property<string>("MuxPlaybackId")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("MuxUploadId")
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("ProviderMode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -438,10 +493,19 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(32)");
 
+                    b.Property<DateTimeOffset?>("StudentPlaybackVerifiedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("datetimeoffset(7)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CurrentSourceId");
+
+                    b.HasIndex("HumanSpotCheckByUserId");
+
+                    b.HasIndex("IncomingSourceId");
 
                     b.HasIndex("LessonId")
                         .IsUnique()
@@ -457,11 +521,29 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("UX_LessonVideos_MuxPlaybackId")
                         .HasFilter("[MuxPlaybackId] IS NOT NULL");
 
+                    b.HasIndex("MuxUploadId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_LessonVideos_MuxUploadId")
+                        .HasFilter("[MuxUploadId] IS NOT NULL");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_LessonVideos_Status");
+
                     b.ToTable("LessonVideos", "catalog", t =>
                         {
                             t.HasCheckConstraint("CK_LessonVideos_DurationSeconds_NonNegative", "[DurationSeconds] IS NULL OR [DurationSeconds] >= 0");
 
-                            t.HasCheckConstraint("CK_LessonVideos_Status", "[Status] IN ('Pending', 'Preparing', 'Ready', 'Errored', 'Disabled')");
+                            t.HasCheckConstraint("CK_LessonVideos_FailureCode", "[Status] <> 'Failed' OR [FailureCode] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_LessonVideos_ProviderMode", "[ProviderMode] IN ('Disabled', 'Deterministic', 'Real')");
+
+                            t.HasCheckConstraint("CK_LessonVideos_ReadyRequiresPlayback", "[Status] <> 'Ready' OR [MuxPlaybackId] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_LessonVideos_ReplacingRequiresLastKnownGood", "[Status] <> 'Replacing' OR [LastKnownGoodPlaybackId] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_LessonVideos_SpotCheckActor", "([HumanSpotCheckAtUtc] IS NULL AND [HumanSpotCheckByUserId] IS NULL) OR ([HumanSpotCheckAtUtc] IS NOT NULL AND [HumanSpotCheckByUserId] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_LessonVideos_Status", "[Status] IN ('Requested', 'Uploading', 'AzureStored', 'MuxIngesting', 'Processing', 'Ready', 'Failed', 'Replacing', 'Archived')");
                         });
                 });
 
@@ -775,7 +857,7 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("CourseId")
+                    b.Property<Guid?>("CourseId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Currency")
@@ -2131,6 +2213,73 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.ToTable("UserRoles", "identity");
                 });
 
+            modelBuilder.Entity("DanielsDojo.Domain.Learning.Certificate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CourseTitleAtIssue")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("HolderNameAtIssue")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("IssuedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("RevocationReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset?>("RevokedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("VerificationCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("VerificationCode")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Certificates_VerificationCode");
+
+                    b.HasIndex("UserId", "CourseId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Certificates_UserId_CourseId");
+
+                    b.ToTable("Certificates", "learning", t =>
+                        {
+                            t.HasCheckConstraint("CK_Certificates_RevocationReason", "([RevokedAtUtc] IS NULL AND [RevocationReason] IS NULL) OR ([RevokedAtUtc] IS NOT NULL AND [RevocationReason] IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("DanielsDojo.Domain.Learning.Enrollment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2212,6 +2361,328 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_LessonProgress_CompletedRequiresStarted", "[CompletedAtUtc] IS NULL OR [StartedAtUtc] IS NOT NULL");
 
                             t.HasCheckConstraint("CK_LessonProgress_LastPositionSeconds_NonNegative", "[LastPositionSeconds] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Media.MediaCaptionTrack", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<Guid>("LessonVideoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("MediaSourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProviderTrackId")
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MediaSourceId");
+
+                    b.HasIndex("ProviderTrackId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CaptionTracks_ProviderTrackId")
+                        .HasFilter("[ProviderTrackId] IS NOT NULL");
+
+                    b.HasIndex("LessonVideoId", "LanguageCode")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CaptionTracks_LessonVideoId_LanguageCode");
+
+                    b.ToTable("CaptionTracks", "media", t =>
+                        {
+                            t.HasCheckConstraint("CK_CaptionTracks_LanguageCode_NotBlank", "LEN(LTRIM(RTRIM([LanguageCode]))) > 0");
+
+                            t.HasCheckConstraint("CK_CaptionTracks_Status", "[Status] IN ('Requested', 'Uploading', 'AzureStored', 'MuxIngesting', 'Processing', 'Ready', 'Failed', 'Replacing', 'Archived')");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Media.MediaSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BlobName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("BlobVersionId")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("ChecksumSha256")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("char(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("ContainerName")
+                        .IsRequired()
+                        .HasMaxLength(63)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(63)");
+
+                    b.Property<long>("ContentLength")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ContentMd5Base64")
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("ETag")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("PropertiesVerifiedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("ProviderMode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset?>("RestoreVerifiedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<long?>("RestoreVerifiedLength")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset?>("SupersededAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid>("UploadSessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UploadSessionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Sources_UploadSessionId");
+
+                    b.HasIndex("LessonId", "Purpose")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Sources_LessonId_Purpose_Current")
+                        .HasFilter("[State] = 'Current' AND [LessonId] IS NOT NULL");
+
+                    b.HasIndex("CourseId", "Purpose", "State")
+                        .HasDatabaseName("IX_Sources_CourseId_Purpose_State");
+
+                    b.ToTable("Sources", "media", t =>
+                        {
+                            t.HasCheckConstraint("CK_Sources_ContentLength_Positive", "[ContentLength] > 0");
+
+                            t.HasCheckConstraint("CK_Sources_LessonScope", "([Purpose] IN ('LessonVideo', 'LessonResource', 'CaptionTrack') AND [LessonId] IS NOT NULL) OR ([Purpose] IN ('CourseImage', 'Avatar') AND [LessonId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Sources_ProviderMode", "[ProviderMode] IN ('Disabled', 'Deterministic', 'Real')");
+
+                            t.HasCheckConstraint("CK_Sources_Purpose", "[Purpose] IN ('LessonVideo', 'LessonResource', 'CourseImage', 'CaptionTrack', 'Avatar')");
+
+                            t.HasCheckConstraint("CK_Sources_RestoreEvidenceComplete", "([RestoreVerifiedAtUtc] IS NULL AND [RestoreVerifiedLength] IS NULL) OR ([RestoreVerifiedAtUtc] IS NOT NULL AND [RestoreVerifiedLength] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Sources_RestoreVerifiedLength_NonNegative", "[RestoreVerifiedLength] IS NULL OR [RestoreVerifiedLength] >= 0");
+
+                            t.HasCheckConstraint("CK_Sources_State", "[State] IN ('Pending', 'Current', 'Superseded', 'Archived')");
+
+                            t.HasCheckConstraint("CK_Sources_SupersededAt", "([State] IN ('Superseded', 'Archived') AND [SupersededAtUtc] IS NOT NULL) OR ([State] IN ('Pending', 'Current') AND [SupersededAtUtc] IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Media.MediaUploadSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BlobName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("ContainerName")
+                        .IsRequired()
+                        .HasMaxLength(63)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(63)");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("DeclaredContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<long>("DeclaredSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<bool>("IsReplacement")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("OriginalFileName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ProviderMode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlobName")
+                        .IsUnique()
+                        .HasDatabaseName("UX_UploadSessions_BlobName");
+
+                    b.HasIndex("ExpiresAtUtc")
+                        .HasDatabaseName("IX_UploadSessions_ExpiresAtUtc");
+
+                    b.HasIndex("LessonId");
+
+                    b.HasIndex("RequestedByUserId");
+
+                    b.HasIndex("CourseId", "Status")
+                        .HasDatabaseName("IX_UploadSessions_CourseId_Status");
+
+                    b.ToTable("UploadSessions", "media", t =>
+                        {
+                            t.HasCheckConstraint("CK_UploadSessions_CompletedAt", "([Status] = 'Completed' AND [CompletedAtUtc] IS NOT NULL) OR ([Status] <> 'Completed' AND [CompletedAtUtc] IS NULL)");
+
+                            t.HasCheckConstraint("CK_UploadSessions_DeclaredSize_Positive", "[DeclaredSizeBytes] > 0");
+
+                            t.HasCheckConstraint("CK_UploadSessions_LessonScope", "([Purpose] IN ('LessonVideo', 'LessonResource', 'CaptionTrack') AND [LessonId] IS NOT NULL) OR ([Purpose] IN ('CourseImage', 'Avatar') AND [LessonId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_UploadSessions_ProviderMode", "[ProviderMode] IN ('Disabled', 'Deterministic', 'Real')");
+
+                            t.HasCheckConstraint("CK_UploadSessions_Purpose", "[Purpose] IN ('LessonVideo', 'LessonResource', 'CourseImage', 'CaptionTrack', 'Avatar')");
+
+                            t.HasCheckConstraint("CK_UploadSessions_Status", "[Status] IN ('Requested', 'Uploading', 'Completed', 'Expired', 'Cancelled', 'Failed')");
                         });
                 });
 
@@ -2301,16 +2772,39 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("DanielsDojo.Domain.Media.MediaSource", "MediaSource")
+                        .WithMany()
+                        .HasForeignKey("MediaSourceId");
+
                     b.Navigation("Lesson");
+
+                    b.Navigation("MediaSource");
                 });
 
             modelBuilder.Entity("DanielsDojo.Domain.Catalog.LessonVideo", b =>
                 {
+                    b.HasOne("DanielsDojo.Domain.Media.MediaSource", "CurrentSource")
+                        .WithMany()
+                        .HasForeignKey("CurrentSourceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("HumanSpotCheckByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DanielsDojo.Domain.Media.MediaSource", null)
+                        .WithMany()
+                        .HasForeignKey("IncomingSourceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("DanielsDojo.Domain.Catalog.Lesson", "Lesson")
                         .WithOne("Video")
                         .HasForeignKey("DanielsDojo.Domain.Catalog.LessonVideo", "LessonId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CurrentSource");
 
                     b.Navigation("Lesson");
                 });
@@ -2387,8 +2881,7 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.HasOne("DanielsDojo.Domain.Catalog.Course", "Course")
                         .WithMany()
                         .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("DanielsDojo.Domain.Commerce.Offer", "Offer")
                         .WithMany()
@@ -2784,6 +3277,25 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DanielsDojo.Domain.Learning.Certificate", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Catalog.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DanielsDojo.Domain.Learning.Enrollment", b =>
                 {
                     b.HasOne("DanielsDojo.Domain.Catalog.Course", "Course")
@@ -2822,6 +3334,69 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DanielsDojo.Domain.Media.MediaCaptionTrack", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Catalog.LessonVideo", "LessonVideo")
+                        .WithMany("CaptionTracks")
+                        .HasForeignKey("LessonVideoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Media.MediaSource", "MediaSource")
+                        .WithMany()
+                        .HasForeignKey("MediaSourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("LessonVideo");
+
+                    b.Navigation("MediaSource");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Media.MediaSource", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Catalog.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Catalog.Lesson", null)
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DanielsDojo.Domain.Media.MediaUploadSession", "UploadSession")
+                        .WithMany()
+                        .HasForeignKey("UploadSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UploadSession");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Media.MediaUploadSession", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Catalog.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Catalog.Lesson", null)
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "RequestedByUser")
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RequestedByUser");
+                });
+
             modelBuilder.Entity("DanielsDojo.Domain.Catalog.Course", b =>
                 {
                     b.Navigation("CourseTags");
@@ -2843,6 +3418,11 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.Navigation("Resources");
 
                     b.Navigation("Video");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Catalog.LessonVideo", b =>
+                {
+                    b.Navigation("CaptionTracks");
                 });
 
             modelBuilder.Entity("DanielsDojo.Domain.Catalog.Tag", b =>

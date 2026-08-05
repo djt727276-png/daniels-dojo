@@ -1,24 +1,25 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 
 import { toApiFailure } from '../../core/api/problem-details';
-import { MemberApi, MyCourse } from '../../core/community/member-api';
+import { LearningApi, MyLearningCourse } from '../../core/learning/learning-api';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 
 type LearningState =
   | { readonly kind: 'loading' }
-  | { readonly kind: 'ready'; readonly courses: readonly MyCourse[] }
+  | { readonly kind: 'ready'; readonly courses: readonly MyLearningCourse[] }
   | { readonly kind: 'error'; readonly message: string };
 
 /**
- * The courses the member is enrolled in.
+ * The learner's shelf.
  *
- * Enrollment is created by purchasing, which is not open yet, so this list is legitimately
- * empty today. The empty state says why and points at the catalog rather than implying
- * something went wrong.
+ * Everything shown here is resolved server-side from entitlements at read time — the shelf is
+ * a projection of what the member actually holds, so a lapsed membership empties it without
+ * any client-side bookkeeping. "Continue" deep-links to the lesson the server picked.
  */
 @Component({
   selector: 'app-my-learning',
@@ -26,6 +27,7 @@ type LearningState =
     RouterLink,
     MatCardModule,
     MatButtonModule,
+    MatProgressBarModule,
     PageHeader,
     LoadingState,
     EmptyState,
@@ -35,7 +37,7 @@ type LearningState =
     <div class="dd-page dd-stack">
       <app-page-header
         title="My Learning"
-        description="Courses you are enrolled in, most recently opened first."
+        description="Courses you hold, with your progress. Pick up where you left off."
       />
 
       @switch (state().kind) {
@@ -51,14 +53,14 @@ type LearningState =
           @if (courses().length === 0) {
             <app-empty-state
               title="Nothing here yet"
-              message="You are not enrolled in a course yet. Buying a course or a membership opens in a later release — until then, the catalog and free previews are open to everyone."
+              message="Courses appear here once a membership or purchase grants them. The catalog and free previews are open to everyone."
               data-testid="learning-empty"
             >
               <a matButton="filled" routerLink="/courses">Browse the catalog</a>
             </app-empty-state>
           } @else {
             <ul class="learning" data-testid="learning-list">
-              @for (course of courses(); track course.slug) {
+              @for (course of courses(); track course.courseId) {
                 <li>
                   <mat-card appearance="outlined">
                     <mat-card-content class="learning__body">
@@ -66,9 +68,31 @@ type LearningState =
                         <a [routerLink]="['/courses', course.slug]">{{ course.title }}</a>
                       </h2>
                       <p class="learning__summary">{{ course.summary }}</p>
+
+                      <div class="learning__progress">
+                        <mat-progress-bar
+                          mode="determinate"
+                          [value]="course.percentComplete"
+                          [attr.aria-label]="'Progress in ' + course.title"
+                        />
+                        <span class="learning__count">
+                          {{ course.completedLessons }} of {{ course.totalLessons }} lessons
+                          @if (course.percentComplete === 100) {
+                            — complete
+                          }
+                        </span>
+                      </div>
                     </mat-card-content>
                     <mat-card-actions>
-                      <a matButton [routerLink]="['/courses', course.slug]">Open</a>
+                      @if (course.resumeLessonId; as resume) {
+                        <a matButton="filled" [routerLink]="['/learn/lessons', resume]">
+                          {{ course.completedLessons === 0 ? 'Start' : 'Continue' }}
+                        </a>
+                      }
+                      <a matButton [routerLink]="['/courses', course.slug]">Outline</a>
+                      @if (course.percentComplete === 100) {
+                        <a matButton routerLink="/certificates">Certificate</a>
+                      }
                     </mat-card-actions>
                   </mat-card>
                 </li>
@@ -97,10 +121,22 @@ type LearningState =
     .learning__summary {
       color: var(--dd-on-surface-variant);
     }
+
+    .learning__progress {
+      display: flex;
+      flex-direction: column;
+      gap: var(--dd-space-2);
+      margin-top: var(--dd-space-4);
+    }
+
+    .learning__count {
+      font-size: var(--dd-text-sm);
+      color: var(--dd-on-surface-variant);
+    }
   `,
 })
 export class MyLearning {
-  private readonly api = inject(MemberApi);
+  private readonly api = inject(LearningApi);
 
   protected readonly state = signal<LearningState>({ kind: 'loading' });
 
@@ -121,7 +157,7 @@ export class MyLearning {
   protected load(): void {
     this.state.set({ kind: 'loading' });
 
-    this.api.getMyCourses().subscribe({
+    this.api.getMyLearning().subscribe({
       next: (courses) => this.state.set({ kind: 'ready', courses }),
       error: (error: unknown) =>
         this.state.set({

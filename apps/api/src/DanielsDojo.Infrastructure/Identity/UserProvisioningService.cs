@@ -20,6 +20,7 @@ namespace DanielsDojo.Infrastructure.Identity;
 public sealed partial class UserProvisioningService(
     DanielsDojoDbContext context,
     TimeProvider timeProvider,
+    Microsoft.Extensions.Options.IOptions<AdminBootstrapOptions> bootstrapOptions,
     ILogger<UserProvisioningService> logger) : IUserProvisioningService
 {
     /// <summary>Provider name recorded on locally provisioned users.</summary>
@@ -61,9 +62,70 @@ public sealed partial class UserProvisioningService(
 
         await SynchronizeProfileAsync(user, identity, cancellationToken).ConfigureAwait(false);
 
+        // A returning sign-in can still consume an unconsumed bootstrap — the designated
+        // account may have registered before the configuration was set.
+        await TryBootstrapAdminAsync(user, identity, cancellationToken).ConfigureAwait(false);
+
         return UserProvisioningResult.Success(
             await BuildApplicationUserAsync(user, cancellationToken).ConfigureAwait(false),
             wasProvisioned: false);
+    }
+
+    /// <summary>
+    /// Grants Admin to the one designated launch administrator, exactly once.
+    /// </summary>
+    /// <remarks>
+    /// Every clause is a distinct defence. The email must match the configured value under
+    /// normalization, so casing games change nothing. The provider must assert the address is
+    /// verified, so a token minted around verification cannot claim the role. And the grant
+    /// only happens while no Admin assignment exists anywhere — the consumed rule — so a
+    /// second account arriving later with the same address is just another student. The role
+    /// lands on the local user row, which is keyed to the immutable (issuer, subject) pair:
+    /// from this point authorization reads that binding and roles, never the email.
+    /// </remarks>
+    private async Task TryBootstrapAdminAsync(
+        User user,
+        ExternalUserIdentity identity,
+        CancellationToken cancellationToken)
+    {
+        string configured = bootstrapOptions.Value.BootstrapAdminEmail;
+
+        if (string.IsNullOrWhiteSpace(configured)
+            || !identity.EmailVerified
+            || string.IsNullOrWhiteSpace(identity.Email)
+            || !string.Equals(
+                identity.Email.Trim().ToUpperInvariant(),
+                configured.Trim().ToUpperInvariant(),
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        // Consumed: the bootstrap exists to create the first administrator, not to add more.
+        bool anyAdmin = await context.UserRoles
+            .AsNoTracking()
+            .AnyAsync(assignment => assignment.RoleId == SeedIds.AdminRole, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (anyAdmin)
+        {
+            return;
+        }
+
+        AdminRoleGrantService grants = new(context, timeProvider);
+
+        AdminGrantResult result = await grants.GrantAsync(
+            user.Id,
+            "One-time launch-administrator bootstrap: first verified sign-in of the "
+            + "configured bootstrap email. Role bound to the immutable external subject.",
+            "bootstrap@first-signin",
+            Guid.NewGuid().ToString("N"),
+            cancellationToken).ConfigureAwait(false);
+
+        if (result.Succeeded)
+        {
+            LogAdminBootstrapped(logger, user.Id);
+        }
     }
 
     private Task<User?> FindAsync(ExternalUserIdentity identity, CancellationToken cancellationToken) =>
@@ -139,6 +201,8 @@ public sealed partial class UserProvisioningService(
         }
 
         LogUserProvisioned(logger, user.Id);
+
+        await TryBootstrapAdminAsync(user, identity, cancellationToken).ConfigureAwait(false);
 
         return UserProvisioningResult.Success(
             await BuildApplicationUserAsync(user, cancellationToken).ConfigureAwait(false),
@@ -234,4 +298,10 @@ public sealed partial class UserProvisioningService(
         Level = LogLevel.Information,
         Message = "Concurrent first sign-in detected; reloaded the winning user record.")]
     private static partial void LogProvisioningRaceResolved(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 3103,
+        Level = LogLevel.Information,
+        Message = "One-time Admin bootstrap consumed by local user {UserId}.")]
+    private static partial void LogAdminBootstrapped(ILogger logger, Guid userId);
 }

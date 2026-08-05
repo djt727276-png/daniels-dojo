@@ -13,8 +13,19 @@
       }
 
       @case ('signedOut') {
-        <p class="account__lead">Sign in or create an account to continue.</p>
-        <button type="button" class="account__action" (click)="signIn()">Sign up or sign in</button>
+        <p class="account__lead">Sign in, or create your account in a minute.</p>
+        <div class="account__actions">
+          <button type="button" class="account__action" (click)="createAccount()">
+            Create account
+          </button>
+          <button
+            type="button"
+            class="account__action account__action--secondary"
+            (click)="signIn()"
+          >
+            Sign in
+          </button>
+        </div>
       }
 
       @case ('signedIn') {

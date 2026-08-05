@@ -62,6 +62,25 @@
   }
 }
 
+.account__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Sign in is the quieter twin: same size and focus ring, inverted colors, so a newcomer's
+   eye lands on Create account first without hiding the returning customer's path. */
+.account__action--secondary {
+  color: #1f2937;
+  background-color: transparent;
+  border-color: #1f2937;
+
+  &:hover {
+    color: #fff;
+    background-color: #111827;
+  }
+}
+
 .account__card {
   align-self: stretch;
 }
