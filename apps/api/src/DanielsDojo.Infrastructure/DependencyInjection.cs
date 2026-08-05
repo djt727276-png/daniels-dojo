@@ -13,6 +13,7 @@ using DanielsDojo.Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace DanielsDojo.Infrastructure;
@@ -72,6 +73,10 @@ public static class DependencyInjection
         services.AddScoped<IForumService, ForumService>();
         services.AddScoped<IModerationService, ModerationService>();
         services.AddScoped<ISocialService, SocialService>();
+
+        // Realtime is optional infrastructure: the API host replaces this with the SignalR
+        // notifier. TryAdd keeps the replacement authoritative.
+        services.TryAddSingleton<IRealtimeNotifier, NoopRealtimeNotifier>();
         services.AddScoped<ICourseAccessEvaluator, CourseAccessEvaluator>();
         services.AddScoped<ILearningService, LearningService>();
         services.AddScoped<ICourseReviewService, CourseReviewService>();

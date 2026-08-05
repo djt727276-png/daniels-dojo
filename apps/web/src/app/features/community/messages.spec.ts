@@ -3,8 +3,21 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 
+import { Subject } from 'rxjs';
+
 import { ConversationDetail, DirectMessageView } from '../../core/community/community-api';
+import { RealtimeService } from '../../core/community/realtime';
 import { Conversation, MessageList } from './messages';
+
+/** A silent doorbell: no connection is opened, and tests can ring it on demand. */
+function realtimeStub() {
+  return {
+    messageReceived: new Subject<string>(),
+    unreadChanged: new Subject<void>(),
+    reconnected: new Subject<void>(),
+    connect: () => undefined,
+  };
+}
 
 const CONVERSATION_ID = '11111111-1111-4111-8111-111111111111';
 const CONVERSATION_URL = `/api/v1/community/conversations/${CONVERSATION_ID}?page=1`;
@@ -46,12 +59,15 @@ function conversation(
 }
 
 function setupConversation() {
+  const realtime = realtimeStub();
+
   TestBed.configureTestingModule({
     imports: [Conversation],
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
       provideRouter([]),
+      { provide: RealtimeService, useValue: realtime },
       {
         provide: ActivatedRoute,
         useValue: { snapshot: { paramMap: new Map([['conversationId', CONVERSATION_ID]]) } },
@@ -62,6 +78,7 @@ function setupConversation() {
   return {
     fixture: TestBed.createComponent(Conversation),
     http: TestBed.inject(HttpTestingController),
+    realtime,
   };
 }
 
@@ -150,6 +167,39 @@ describe('Conversation', () => {
     expect(host(fixture).textContent).toContain('could not load this conversation');
   });
 
+  it('refetches when the doorbell rings for this conversation, and only this one', () => {
+    const { fixture, http, realtime } = setupConversation();
+
+    http.expectOne(CONVERSATION_URL).flush(conversation([message()]));
+    fixture.detectChanges();
+
+    // A ring for some other conversation is ignored — no request goes out.
+    realtime.messageReceived.next('99999999-9999-4999-8999-999999999999');
+    http.expectNone(CONVERSATION_URL);
+
+    // A ring for this conversation refetches the same REST endpoint.
+    realtime.messageReceived.next(CONVERSATION_ID);
+    http
+      .expectOne(CONVERSATION_URL)
+      .flush(conversation([message(), message({ id: 'bbbbbbbb-1111-4111-8111-111111111111' })]));
+    fixture.detectChanges();
+
+    expect(host(fixture).querySelectorAll('.conversation__item').length).toBe(2);
+  });
+
+  it('refetches after a reconnect, because missed events are already persisted', () => {
+    const { fixture, http, realtime } = setupConversation();
+
+    http.expectOne(CONVERSATION_URL).flush(conversation([]));
+    fixture.detectChanges();
+
+    realtime.reconnected.next();
+    http.expectOne(CONVERSATION_URL).flush(conversation([message()]));
+    fixture.detectChanges();
+
+    expect(host(fixture).querySelectorAll('.conversation__item').length).toBe(1);
+  });
+
   it('reports a foreign conversation as simply unavailable', () => {
     const { fixture, http } = setupConversation();
 
@@ -167,14 +217,22 @@ describe('MessageList', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   function setupList() {
+    const realtime = realtimeStub();
+
     TestBed.configureTestingModule({
       imports: [MessageList],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: RealtimeService, useValue: realtime },
+      ],
     });
 
     return {
       fixture: TestBed.createComponent(MessageList),
       http: TestBed.inject(HttpTestingController),
+      realtime,
     };
   }
 

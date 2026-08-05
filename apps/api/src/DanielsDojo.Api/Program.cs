@@ -46,6 +46,12 @@ builder.Services.AddCommerce(builder.Configuration);
 // The Development sign-in harness is registered only inside the Development environment.
 builder.Services.AddDanielsDojoAuthentication(builder.Configuration, builder.Environment);
 
+// Live community events. The API-hosted transport is the low-cost development choice; the
+// IRealtimeNotifier abstraction is where Azure SignalR would slot in for scale-out.
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<DanielsDojo.Application.Community.IRealtimeNotifier,
+    DanielsDojo.Api.Community.SignalRRealtimeNotifier>();
+
 // Actor and correlation for audited writes. The actor is the local application user resolved
 // by the provisioning middleware, never a token claim.
 builder.Services.AddHttpContextAccessor();
@@ -113,6 +119,9 @@ if (DevelopmentAuthOptions.IsExactlyDevelopment(app.Environment)
 // Local stand-in for the cloud storage endpoint. Mapped only in deterministic mode, so in
 // every other mode the route does not exist rather than merely refusing.
 app.MapDeterministicMediaSink();
+
+// The live channel. Receive-only; content still flows through audited REST.
+app.MapHub<DanielsDojo.Api.Community.CommunityHub>("/hubs/community");
 
 // Versioned, unauthenticated system-status endpoint.
 var apiV1 = app.MapGroup("/api/v1");

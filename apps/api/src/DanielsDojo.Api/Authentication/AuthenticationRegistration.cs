@@ -203,6 +203,23 @@ public static class AuthenticationRegistration
                 jwtOptions.Events ??= new JwtBearerEvents();
                 jwtOptions.Events.OnTokenValidated = static _ => Task.CompletedTask;
 
+                // Browsers cannot attach an Authorization header to a WebSocket handshake, so
+                // SignalR sends the bearer as the access_token query parameter. Accepted for
+                // hub paths only — everything else keeps the header requirement — and the
+                // token is validated by exactly the same pipeline either way.
+                jwtOptions.Events.OnMessageReceived = static messageContext =>
+                {
+                    string? accessToken = messageContext.Request.Query["access_token"];
+
+                    if (!string.IsNullOrEmpty(accessToken)
+                        && messageContext.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    {
+                        messageContext.Token = accessToken;
+                    }
+
+                    return Task.CompletedTask;
+                };
+
                 // Suppress the default WWW-Authenticate detail so a rejected token never
                 // explains which validation step failed.
                 jwtOptions.Events.OnChallenge = static challengeContext =>

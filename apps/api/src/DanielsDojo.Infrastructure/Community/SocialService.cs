@@ -35,15 +35,18 @@ internal sealed class SocialService : ISocialService
     private readonly DanielsDojoDbContext context;
     private readonly ICommunityAccessEvaluator accessEvaluator;
     private readonly TimeProvider timeProvider;
+    private readonly IRealtimeNotifier realtime;
 
     public SocialService(
         DanielsDojoDbContext context,
         ICommunityAccessEvaluator accessEvaluator,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IRealtimeNotifier realtime)
     {
         this.context = context;
         this.accessEvaluator = accessEvaluator;
         this.timeProvider = timeProvider;
+        this.realtime = realtime;
     }
 
     // ------------------------------------------------------------------ discovery
@@ -685,6 +688,11 @@ internal sealed class SocialService : ISocialService
         AddNotification(otherUserId, userId, NotificationKind.DirectMessage, "Conversation", conversationId, now);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // The message is durable; now the doorbell. A push failure is not a send failure —
+        // the recipient reconciles over REST either way.
+        await realtime.MessageReceivedAsync(otherUserId, conversationId, cancellationToken);
+        await realtime.UnreadChangedAsync(otherUserId, cancellationToken);
 
         return await BuildConversationAsync(userId, conversationId, 1, DefaultPageSize, cancellationToken);
     }

@@ -1,10 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { RouterLink } from '@angular/router';
 
 import { toApiFailure } from '../../core/api/problem-details';
 import { CommunityApi, NotificationView } from '../../core/community/community-api';
+import { RealtimeService } from '../../core/community/realtime';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 
@@ -189,6 +191,7 @@ function describe(notification: NotificationView): string {
 })
 export class Notifications {
   private readonly api = inject(CommunityApi);
+  private readonly realtime = inject(RealtimeService);
 
   protected readonly describe = describe;
   protected readonly route = targetRoute;
@@ -201,6 +204,19 @@ export class Notifications {
 
   constructor() {
     this.load();
+
+    // The doorbell says only "changed"; the inbox itself is refetched from REST.
+    this.realtime.connect();
+    this.realtime.unreadChanged.pipe(takeUntilDestroyed()).subscribe(() => this.refresh());
+    this.realtime.reconnected.pipe(takeUntilDestroyed()).subscribe(() => this.refresh());
+  }
+
+  /** Live update: refetch quietly, without blanking the inbox behind a spinner. */
+  private refresh(): void {
+    this.api.listNotifications().subscribe({
+      next: (page) => this.notifications.set(page.items),
+      error: () => undefined,
+    });
   }
 
   protected load(): void {
