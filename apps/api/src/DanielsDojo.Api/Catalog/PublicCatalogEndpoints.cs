@@ -47,6 +47,17 @@ internal static class PublicCatalogEndpoints
             })
             .WithName("GetPublicCourse");
 
+        catalog.MapGet("/membership", async (
+                IPublicCatalogQueries queries,
+                CancellationToken cancellationToken) =>
+            {
+                PublicPrice? price = await queries.GetMembershipPriceAsync(cancellationToken);
+
+                // 404 while no membership price is live: the pricing page says so honestly.
+                return price is null ? Results.NotFound() : Results.Ok(price);
+            })
+            .WithName("GetMembershipPrice");
+
         catalog.MapGet("/courses/{courseSlug}/lessons/{lessonSlug}/preview", async (
                 string courseSlug,
                 string lessonSlug,

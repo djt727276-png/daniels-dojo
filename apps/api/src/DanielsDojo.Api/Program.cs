@@ -1,3 +1,4 @@
+using DanielsDojo.Api.Admin;
 using DanielsDojo.Api.Authentication;
 using DanielsDojo.Api.Catalog;
 using DanielsDojo.Api.Commerce;
@@ -6,6 +7,7 @@ using DanielsDojo.Api.Common;
 using DanielsDojo.Api.Hosting;
 using DanielsDojo.Api.Learning;
 using DanielsDojo.Api.Media;
+using DanielsDojo.Api.Privacy;
 using DanielsDojo.Application.Common;
 using DanielsDojo.Application.Identity;
 using DanielsDojo.Application.System;
@@ -32,6 +34,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks().AddDatabaseReadinessCheck();
 builder.Services.AddOpenApi();
 
+// Operational telemetry: requests, dependencies, exceptions, and W3C correlation. Active
+// only where APPLICATIONINSIGHTS_CONNECTION_STRING is configured (the deployed
+// environments); locally this registers and stays silent. The audit trail records the same
+// W3C activity id, so a database audit row joins to its trace in the portal.
+builder.Services.AddApplicationInsightsTelemetry();
+
 // Persistence. Registration opens no connection and never migrates or seeds.
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -45,6 +53,12 @@ builder.Services.AddCommerce(builder.Configuration);
 // Entra External ID bearer validation plus local, database-backed application authorization.
 // The Development sign-in harness is registered only inside the Development environment.
 builder.Services.AddDanielsDojoAuthentication(builder.Configuration, builder.Environment);
+
+// Live community events. The API-hosted transport is the low-cost development choice; the
+// IRealtimeNotifier abstraction is where Azure SignalR would slot in for scale-out.
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<DanielsDojo.Application.Community.IRealtimeNotifier,
+    DanielsDojo.Api.Community.SignalRRealtimeNotifier>();
 
 // Actor and correlation for audited writes. The actor is the local application user resolved
 // by the provisioning middleware, never a token claim.
@@ -114,6 +128,12 @@ if (DevelopmentAuthOptions.IsExactlyDevelopment(app.Environment)
 // every other mode the route does not exist rather than merely refusing.
 app.MapDeterministicMediaSink();
 
+// Stand-in "pay" action for the deterministic payment provider, under the same rule.
+app.MapDeterministicCheckout();
+
+// The live channel. Receive-only; content still flows through audited REST.
+app.MapHub<DanielsDojo.Api.Community.CommunityHub>("/hubs/community");
+
 // Versioned, unauthenticated system-status endpoint.
 var apiV1 = app.MapGroup("/api/v1");
 apiV1.MapGet("/system/status",
@@ -147,6 +167,12 @@ apiV1.MapMediaWebhookEndpoints();
 apiV1.MapForumEndpoints();
 apiV1.MapSocialEndpoints();
 apiV1.MapModerationEndpoints();
+
+// The member's rights over their own data: export and deletion.
+apiV1.MapPrivacyEndpoints();
+
+// The operator's back office: accounts, records, switches, and what is running.
+apiV1.MapAdminOperationsEndpoints();
 
 // Authenticated session view. Every value comes from the local user record resolved by the
 // provisioning middleware, never from the token.

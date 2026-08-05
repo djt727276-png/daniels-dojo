@@ -21,7 +21,16 @@
     @default {
       @if (state(); as current) {
         @if (current.kind === 'ready') {
-          <app-page-header [title]="current.course.title" [description]="current.course.summary" />
+          <app-page-header [title]="current.course.title" [description]="current.course.summary">
+            <button
+              matButton="outlined"
+              type="button"
+              (click)="share(current.course)"
+              data-testid="share-course"
+            >
+              {{ shared() ? 'Link copied!' : 'Share' }}
+            </button>
+          </app-page-header>
 
           <div class="detail">
             <div class="detail__main dd-stack">
@@ -93,39 +102,60 @@
                 <mat-card-content class="access">
                   <h2 id="access-heading" class="access__heading">Get access</h2>
 
-                  @if (current.course.lifetimePrice) {
+                  @if (purchaseNote(); as note) {
+                    <p class="access__note" role="status" data-testid="purchase-note">
+                      {{ note }}
+                    </p>
+                  }
+
+                  @if (current.course.lifetimePrice; as lifetime) {
                     <div class="access__option">
                       <p class="access__label">Buy this course</p>
                       <p class="access__price" data-testid="detail-lifetime-price">
-                        {{ formatPrice(current.course.lifetimePrice) }}
+                        {{ formatPrice(lifetime) }}
                       </p>
-                      <button
-                        matButton="filled"
-                        type="button"
-                        disabled
-                        matTooltip="Purchasing is not available yet"
-                        data-testid="buy-lifetime"
-                      >
-                        Purchasing coming soon
-                      </button>
+                      @if (signedIn()) {
+                        <button
+                          matButton="filled"
+                          type="button"
+                          [disabled]="buying()"
+                          (click)="buy(lifetime.offerId)"
+                          data-testid="buy-lifetime"
+                        >
+                          {{ buying() ? 'Starting checkout…' : 'Buy this course' }}
+                        </button>
+                      } @else {
+                        <a matButton="filled" routerLink="/account" data-testid="buy-lifetime">
+                          Sign in to buy
+                        </a>
+                      }
                     </div>
                   }
 
-                  @if (current.course.includedInMembership && current.course.membershipPrice) {
+                  @if (
+                    current.course.includedInMembership && current.course.membershipPrice;
+                    as membership
+                  ) {
                     <div class="access__option">
                       <p class="access__label">Included with membership</p>
                       <p class="access__price" data-testid="detail-membership-price">
-                        {{ formatPrice(current.course.membershipPrice) }}
+                        {{ formatPrice(current.course.membershipPrice!) }}
                       </p>
-                      <button
-                        matButton="outlined"
-                        type="button"
-                        disabled
-                        matTooltip="Membership is not available yet"
-                        data-testid="buy-membership"
-                      >
-                        Purchasing coming soon
-                      </button>
+                      @if (signedIn()) {
+                        <button
+                          matButton="outlined"
+                          type="button"
+                          [disabled]="buying()"
+                          (click)="buy(current.course.membershipPrice!.offerId)"
+                          data-testid="buy-membership"
+                        >
+                          {{ buying() ? 'Starting checkout…' : 'Start membership' }}
+                        </button>
+                      } @else {
+                        <a matButton="outlined" routerLink="/account" data-testid="buy-membership">
+                          Sign in to join
+                        </a>
+                      }
                     </div>
                   }
 
@@ -136,6 +166,8 @@
               </mat-card>
             </aside>
           </div>
+
+          <app-course-reviews [slug]="slug" />
         }
       }
     }

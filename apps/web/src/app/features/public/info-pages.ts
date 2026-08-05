@@ -1,18 +1,28 @@
-import { Component } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { RouterLink } from '@angular/router';
 
+import { toApiFailure } from '../../core/api/problem-details';
+import { AuthService } from '../../core/auth/auth.service';
+import { CatalogApi } from '../../core/catalog/catalog-api';
+import { PublicPrice, formatPrice } from '../../core/catalog/catalog.model';
+import {
+  BillingApi,
+  COMMERCE_ALREADY_OWNED,
+  COMMERCE_PROVIDER_DISABLED,
+} from '../../core/commerce/billing-api';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { ProsePage } from './prose-page';
 
 /**
  * Pricing.
  *
- * The two real ways to buy: the monthly membership and per-course lifetime purchases. The
- * figures shown are the platform's standard configured prices; each course page shows its
- * own exact price at purchase time, so nothing here can drift from what Stripe charges.
+ * The membership price is the live published one, fetched from the same API that checkout
+ * charges from, so this page can never drift from what Stripe charges. Each course page
+ * shows its own exact lifetime price the same way.
  */
 @Component({
   selector: 'app-pricing-page',
@@ -32,8 +42,15 @@ import { ProsePage } from './prose-page';
           </mat-card-header>
           <mat-card-content>
             <p class="pricing__price">
-              <span class="pricing__amount">$9.99</span>
-              <span class="pricing__interval">/ month</span>
+              @if (membership(); as price) {
+                <span class="pricing__amount" data-testid="membership-price">
+                  {{ formatPrice(price) }}
+                </span>
+              } @else {
+                <span class="pricing__interval" data-testid="membership-unpublished">
+                  Membership pricing is being prepared.
+                </span>
+              }
             </p>
             <ul class="pricing__list">
               <li>Every membership-included course</li>
@@ -42,9 +59,32 @@ import { ProsePage } from './prose-page';
               <li>Full community access</li>
               <li>Cancel anytime — access runs to the end of the paid period</li>
             </ul>
+
+            @if (purchaseNote(); as note) {
+              <p class="pricing__note" role="status" data-testid="pricing-purchase-note">
+                {{ note }}
+              </p>
+            }
           </mat-card-content>
           <mat-card-actions>
-            <a matButton="filled" routerLink="/courses">Browse what's included</a>
+            @if (membership(); as price) {
+              @if (signedIn()) {
+                <button
+                  matButton="filled"
+                  type="button"
+                  [disabled]="buying()"
+                  (click)="startMembership(price.offerId)"
+                  data-testid="start-membership"
+                >
+                  {{ buying() ? 'Starting checkout…' : 'Start membership' }}
+                </button>
+              } @else {
+                <a matButton="filled" routerLink="/account" data-testid="start-membership">
+                  Sign in to join
+                </a>
+              }
+            }
+            <a matButton routerLink="/courses">Browse what's included</a>
           </mat-card-actions>
         </mat-card>
 
@@ -55,8 +95,7 @@ import { ProsePage } from './prose-page';
           </mat-card-header>
           <mat-card-content>
             <p class="pricing__price">
-              <span class="pricing__amount">from $19.99</span>
-              <span class="pricing__interval">one time</span>
+              <span class="pricing__interval">One payment — exact price on each course page</span>
             </p>
             <ul class="pricing__list">
               <li>That course, forever — no subscription needed</li>
@@ -114,7 +153,49 @@ import { ProsePage } from './prose-page';
     }
   `,
 })
-export class PricingPage {}
+export class PricingPage {
+  private readonly catalog = inject(CatalogApi);
+  private readonly billing = inject(BillingApi);
+  private readonly auth = inject(AuthService);
+  private readonly document = inject(DOCUMENT);
+
+  protected readonly formatPrice = formatPrice;
+  protected readonly membership = signal<PublicPrice | null>(null);
+  protected readonly buying = signal(false);
+  protected readonly purchaseNote = signal<string | null>(null);
+
+  /** Whether a session exists — deciding which button shows, never what is allowed. */
+  protected readonly signedIn = this.auth.session;
+
+  constructor() {
+    this.catalog.getMembershipPrice().subscribe({
+      next: (price) => this.membership.set(price),
+      // 404 simply means no live price; the template already says so.
+      error: () => this.membership.set(null),
+    });
+  }
+
+  protected startMembership(offerId: string): void {
+    this.buying.set(true);
+    this.purchaseNote.set(null);
+
+    this.billing.startCheckout(offerId).subscribe({
+      next: (started) => this.document.location.assign(started.checkoutUrl),
+      error: (error: unknown) => {
+        this.buying.set(false);
+        const failure = toApiFailure(error, 'Checkout could not be started just now.');
+
+        this.purchaseNote.set(
+          failure.code === COMMERCE_PROVIDER_DISABLED
+            ? 'Purchasing is not switched on in this environment yet.'
+            : failure.code === COMMERCE_ALREADY_OWNED
+              ? 'You already have an active membership — see your account page.'
+              : failure.message,
+        );
+      },
+    });
+  }
+}
 
 /** Frequently asked questions, answered from how the platform actually behaves. */
 @Component({

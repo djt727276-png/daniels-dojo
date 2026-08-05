@@ -28,6 +28,26 @@ internal static class SocialEndpoints
         MapBlocks(community);
         MapConversations(community);
 
+        community.MapGet("/avatars/{userId:guid}", async (
+                Guid userId,
+                ICurrentUser currentUser,
+                IAvatarService avatars,
+                CancellationToken cancellationToken) =>
+            {
+                AvatarContent? avatar = await avatars.GetAsync(
+                    currentUser.User!.UserId, userId, cancellationToken);
+
+                // Absent and hidden-by-block are deliberately the same answer.
+                return avatar is null
+                    ? Results.NotFound()
+                    : Results.File(
+                        avatar.Bytes,
+                        avatar.ContentType,
+                        entityTag: new Microsoft.Net.Http.Headers.EntityTagHeaderValue(
+                            avatar.ETag));
+            })
+            .WithName("GetMemberAvatar");
+
         RouteGroupBuilder me = apiV1
             .MapGroup("/me")
             .RequireAuthorization(AuthenticationRegistration.StudentPolicy);

@@ -1,35 +1,23 @@
 import { TestBed } from '@angular/core/testing';
-import { Router, UrlTree, provideRouter } from '@angular/router';
+import { UrlTree, provideRouter } from '@angular/router';
 import { Signal, signal } from '@angular/core';
+import { Observable, firstValueFrom } from 'rxjs';
 
-import { Session } from './session.model';
+import { Session, SessionState } from './session.model';
 import { adminGuard, authenticatedGuard } from './admin.guard';
 import { AuthService } from './auth.service';
 
 /**
- * Minimal stand-in exposing only what the guards read.
+ * Minimal stand-in exposing only what the guards read: the session state signal.
  *
- * The guards are user experience: they keep a member from landing on a screen that would fail
- * anyway. Authorization itself happens on the server, which re-checks the local database role
- * on every request — so these tests assert routing behaviour, not security.
+ * The guards are user experience: they keep a member from landing on a screen that would
+ * fail anyway. Authorization itself happens on the server, which re-checks the local
+ * database role on every request — so these tests assert routing behaviour, not security.
  */
 class FakeAuth {
-  readonly current = signal<Session | null>(null);
+  readonly state = signal<SessionState>({ kind: 'loading' });
 
-  readonly session: Signal<Session | null> = this.current;
-
-  readonly isAdmin: Signal<boolean> = signal(false) as unknown as Signal<boolean>;
-
-  private readonly adminFlag = signal(false);
-
-  constructor() {
-    (this as { isAdmin: Signal<boolean> }).isAdmin = this.adminFlag;
-  }
-
-  signInAs(session: Session | null, admin: boolean): void {
-    this.current.set(session);
-    this.adminFlag.set(admin);
-  }
+  readonly sessionState: Signal<SessionState> = this.state;
 }
 
 function session(roles: readonly string[]): Session {
@@ -48,58 +36,69 @@ function setup() {
     providers: [provideRouter([]), { provide: AuthService, useValue: auth }],
   });
 
-  return { auth, router: TestBed.inject(Router) };
+  return { auth };
 }
 
-function run(guard: typeof adminGuard): boolean | UrlTree {
-  return TestBed.runInInjectionContext(() => guard(null as never, null as never)) as
-    boolean | UrlTree;
+async function run(guard: typeof adminGuard): Promise<boolean | UrlTree> {
+  const result = TestBed.runInInjectionContext(() =>
+    guard(null as never, null as never),
+  ) as Observable<boolean | UrlTree>;
+
+  return firstValueFrom(result);
 }
 
 describe('authenticatedGuard', () => {
-  it('sends a signed-out visitor to the page that offers sign-in', () => {
+  it('sends a signed-out visitor to the page that offers sign-in', async () => {
     const { auth } = setup();
-    auth.signInAs(null, false);
+    auth.state.set({ kind: 'signedOut' });
 
-    const result = run(authenticatedGuard);
+    const result = await run(authenticatedGuard);
 
     expect(result).toBeInstanceOf(UrlTree);
     expect(String(result)).toBe('/account');
   });
 
-  it('lets a signed-in member through', () => {
+  it('lets a signed-in member through', async () => {
     const { auth } = setup();
-    auth.signInAs(session(['Student']), false);
+    auth.state.set({ kind: 'signedIn', session: session(['Student']) });
 
-    expect(run(authenticatedGuard)).toBe(true);
+    expect(await run(authenticatedGuard)).toBe(true);
+  });
+
+  it('waits for a loading session instead of bouncing a refresh', async () => {
+    const { auth } = setup();
+
+    // The guard must not decide while the state is 'loading' — a hard refresh on a
+    // protected route would otherwise always bounce. It answers once the state settles.
+    const pending = run(authenticatedGuard);
+    auth.state.set({ kind: 'signedIn', session: session(['Student']) });
+
+    expect(await pending).toBe(true);
   });
 });
 
 describe('adminGuard', () => {
-  it('turns a Student away from an admin route reached by typing the URL', () => {
+  it('turns a Student away from an admin route reached by typing the URL', async () => {
     const { auth } = setup();
-    auth.signInAs(session(['Student']), false);
+    auth.state.set({ kind: 'signedIn', session: session(['Student']) });
 
-    const result = run(adminGuard);
+    const result = await run(adminGuard);
 
     expect(result).toBeInstanceOf(UrlTree);
     expect(String(result)).toBe('/account');
   });
 
-  it('lets a member through when the API reported the Admin role', () => {
+  it('lets a member through when the API reported the Admin role', async () => {
     const { auth } = setup();
-    auth.signInAs(session(['Admin', 'Student']), true);
+    auth.state.set({ kind: 'signedIn', session: session(['Admin', 'Student']) });
 
-    expect(run(adminGuard)).toBe(true);
+    expect(await run(adminGuard)).toBe(true);
   });
 
-  it('reads the role from the session the API returned, not from a token', () => {
+  it('refuses while signed out entirely', async () => {
     const { auth } = setup();
+    auth.state.set({ kind: 'signedOut' });
 
-    // A session that merely claims Admin in its role list is still gated on what the
-    // AuthService computed from the API response — and the API is the real boundary.
-    auth.signInAs(session(['Admin']), false);
-
-    expect(run(adminGuard)).toBeInstanceOf(UrlTree);
+    expect(await run(adminGuard)).toBeInstanceOf(UrlTree);
   });
 });

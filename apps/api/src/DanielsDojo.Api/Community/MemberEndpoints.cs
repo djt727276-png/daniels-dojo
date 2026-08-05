@@ -79,5 +79,32 @@ internal static class MemberEndpoints
                 await members.UpdateCommunityProfileAsync(
                     currentUser.User!.UserId, request, cancellationToken)))
             .WithName("UpdateMemberCommunityProfile");
+
+        me.MapPut("/community/profile/avatar", async (
+                IFormFile file,
+                ICurrentUser currentUser,
+                IAvatarService avatars,
+                CancellationToken cancellationToken) =>
+            {
+                await using Stream content = file.OpenReadStream();
+
+                Application.Common.OperationResult result = await avatars.SetAsync(
+                    currentUser.User!.UserId, content, file.Length, cancellationToken);
+
+                return result.Succeeded ? Results.NoContent() : OperationResults.ToProblem(result);
+            })
+            .WithName("SetMemberAvatar")
+            .RequireRateLimiting(RateLimitPolicies.CommunityWrite)
+            .DisableAntiforgery();
+
+        me.MapDelete("/community/profile/avatar", async (
+                ICurrentUser currentUser,
+                IAvatarService avatars,
+                CancellationToken cancellationToken) =>
+            {
+                await avatars.RemoveAsync(currentUser.User!.UserId, cancellationToken);
+                return Results.NoContent();
+            })
+            .WithName("RemoveMemberAvatar");
     }
 }

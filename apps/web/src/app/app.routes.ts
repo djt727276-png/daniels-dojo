@@ -166,6 +166,26 @@ export const routes: Routes = [
     title: "Lesson video — Daniel's Dojo",
   },
   {
+    path: 'admin/users',
+    loadComponent: () =>
+      import('./features/admin/operations/admin-users').then((m) => m.AdminUsers),
+    canActivate: [authenticatedGuard, adminGuard],
+    title: "Members — Daniel's Dojo",
+  },
+  {
+    path: 'admin/records',
+    loadComponent: () =>
+      import('./features/admin/operations/admin-records').then((m) => m.AdminRecords),
+    canActivate: [authenticatedGuard, adminGuard],
+    title: "Records — Daniel's Dojo",
+  },
+  {
+    path: 'admin/ops',
+    loadComponent: () => import('./features/admin/operations/admin-ops').then((m) => m.AdminOps),
+    canActivate: [authenticatedGuard, adminGuard],
+    title: "Operations — Daniel's Dojo",
+  },
+  {
     path: 'admin/pricing',
     loadComponent: () =>
       import('./features/admin/pricing/admin-pricing').then((m) => m.AdminPricing),
@@ -177,6 +197,27 @@ export const routes: Routes = [
     loadComponent: () => import('./features/community/community-home').then((m) => m.CommunityHome),
     canActivate: [authenticatedGuard],
     title: "Community — Daniel's Dojo",
+  },
+  {
+    // The deterministic provider's stand-in checkout. In Stripe mode this route is never
+    // reached because the checkout URL points at Stripe's own hosted page.
+    path: 'checkout/deterministic/:sessionId',
+    loadComponent: () =>
+      import('./features/commerce/deterministic-checkout').then((m) => m.DeterministicCheckout),
+    canActivate: [authenticatedGuard],
+    title: "Checkout — Daniel's Dojo",
+  },
+  {
+    // Where the deterministic portal stand-in returns; the account page is the portal here.
+    path: 'account/deterministic-portal',
+    redirectTo: 'account',
+  },
+  {
+    path: 'community/search',
+    loadComponent: () =>
+      import('./features/community/community-search').then((m) => m.CommunitySearch),
+    canActivate: [authenticatedGuard],
+    title: "Search discussions — Daniel's Dojo",
   },
   {
     path: 'community/c/:categorySlug',

@@ -27,6 +27,7 @@ export interface CommunityStatus {
 export interface MyCommunityProfile {
   readonly handle: string;
   readonly bio: string | null;
+  readonly hasAvatar: boolean;
   readonly isDiscoverable: boolean;
   readonly friendRequestPolicy: FriendRequestPolicy;
   readonly messagePolicy: MessagePolicy;
@@ -106,5 +107,26 @@ export class MemberApi {
 
   updateCommunityProfile(request: UpdateCommunityProfileRequest): Observable<MyCommunityProfile> {
     return this.http.put<MyCommunityProfile>(`${this.root}/community/profile`, request);
+  }
+
+  uploadAvatar(file: File): Observable<void> {
+    const form = new FormData();
+    form.append('file', file);
+
+    return this.http.put<void>(`${this.root}/community/profile/avatar`, form);
+  }
+
+  removeAvatar(): Observable<void> {
+    return this.http.delete<void>(`${this.root}/community/profile/avatar`);
+  }
+
+  /** Everything the platform holds about the member, as a downloadable JSON document. */
+  exportMyData(): Observable<Blob> {
+    return this.http.get(`${this.root}/privacy/export`, { responseType: 'blob' });
+  }
+
+  /** Irreversible. The server requires the typed confirmation phrase. */
+  deleteMyAccount(confirmation: string): Observable<void> {
+    return this.http.post<void>(`${this.root}/privacy/delete-account`, { confirmation });
   }
 }

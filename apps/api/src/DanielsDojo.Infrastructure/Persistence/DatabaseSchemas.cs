@@ -29,4 +29,7 @@ public static class DatabaseSchemas
 
     /// <summary>EF Core migration history. Never cleared by test resets.</summary>
     public const string Infrastructure = "infrastructure";
+
+    /// <summary>Operator-facing platform switches.</summary>
+    public const string Platform = "platform";
 }

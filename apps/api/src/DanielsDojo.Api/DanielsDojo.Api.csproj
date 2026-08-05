@@ -15,6 +15,7 @@
   <ItemGroup>
     <!-- Development-only OpenAPI document generation (.NET 10 built-in generator). -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <!-- Entra External ID bearer token validation. -->
     <PackageReference Include="Microsoft.Identity.Web" />
   </ItemGroup>

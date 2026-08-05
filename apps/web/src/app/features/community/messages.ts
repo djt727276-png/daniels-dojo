@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -13,6 +14,7 @@ import {
   ConversationSummary,
   DirectMessageView,
 } from '../../core/community/community-api';
+import { RealtimeService } from '../../core/community/realtime';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 
@@ -109,6 +111,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-view
 })
 export class MessageList {
   private readonly api = inject(CommunityApi);
+  private readonly realtime = inject(RealtimeService);
 
   protected readonly conversations = signal<readonly ConversationSummary[]>([]);
   protected readonly loading = signal(true);
@@ -116,6 +119,12 @@ export class MessageList {
 
   constructor() {
     this.load();
+
+    // The doorbell only says "changed"; the list itself is refetched from REST.
+    this.realtime.connect();
+    this.realtime.messageReceived.pipe(takeUntilDestroyed()).subscribe(() => this.refresh());
+    this.realtime.unreadChanged.pipe(takeUntilDestroyed()).subscribe(() => this.refresh());
+    this.realtime.reconnected.pipe(takeUntilDestroyed()).subscribe(() => this.refresh());
   }
 
   protected load(): void {
@@ -131,6 +140,14 @@ export class MessageList {
         this.loading.set(false);
         this.failed.set(true);
       },
+    });
+  }
+
+  /** Live update: refetch quietly, without blanking the list behind a spinner. */
+  private refresh(): void {
+    this.api.listConversations().subscribe({
+      next: (conversations) => this.conversations.set(conversations),
+      error: () => undefined,
     });
   }
 }
@@ -303,6 +320,7 @@ type ConversationState =
 export class Conversation {
   private readonly api = inject(CommunityApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly realtime = inject(RealtimeService);
 
   protected readonly conversationId = this.route.snapshot.paramMap.get('conversationId') ?? '';
   protected readonly state = signal<ConversationState>({ kind: 'loading' });
@@ -327,6 +345,24 @@ export class Conversation {
 
   constructor() {
     this.load();
+
+    // A ring names the conversation that changed; only this one refetches. Reconnection
+    // refetches unconditionally — whatever arrived while offline is already persisted.
+    this.realtime.connect();
+    this.realtime.messageReceived.pipe(takeUntilDestroyed()).subscribe((conversationId) => {
+      if (conversationId === this.conversationId) {
+        this.refresh();
+      }
+    });
+    this.realtime.reconnected.pipe(takeUntilDestroyed()).subscribe(() => this.refresh());
+  }
+
+  /** Live update: refetch quietly, keeping the thread on screen. */
+  private refresh(): void {
+    this.api.getConversation(this.conversationId).subscribe({
+      next: (conversation) => this.state.set({ kind: 'ready', conversation }),
+      error: () => undefined,
+    });
   }
 
   protected load(): void {

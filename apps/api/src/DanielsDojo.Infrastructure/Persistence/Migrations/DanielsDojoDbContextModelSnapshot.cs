@@ -1789,6 +1789,9 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<Guid?>("SolvedPostId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -1812,6 +1815,8 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Status")
                         .HasDatabaseName("IX_ForumThreads_Status");
+
+                    b.HasIndex("Id", "SolvedPostId");
 
                     b.HasIndex("CategoryId", "IsPinned", "LastActivityAtUtc")
                         .HasDatabaseName("IX_ForumThreads_CategoryId_IsPinned_LastActivityAtUtc");
@@ -1958,9 +1963,42 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Notifications", "community", t =>
                         {
-                            t.HasCheckConstraint("CK_Notifications_Kind", "[Kind] IN ('FriendRequest', 'FriendAccepted', 'ThreadReply', 'PostReaction', 'DirectMessage', 'Moderation')");
+                            t.HasCheckConstraint("CK_Notifications_Kind", "[Kind] IN ('FriendRequest', 'FriendAccepted', 'ThreadReply', 'PostReaction', 'DirectMessage', 'Moderation', 'CourseAnnouncement', 'PurchaseCompleted', 'CourseCompleted')");
 
                             t.HasCheckConstraint("CK_Notifications_NoSelfNotification", "[ActorUserId] IS NULL OR [ActorUserId] <> [RecipientUserId]");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ProfileAvatar", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("ProfileAvatars", "community", t =>
+                        {
+                            t.HasCheckConstraint("CK_ProfileAvatars_Bytes_Size", "DATALENGTH([Bytes]) BETWEEN 1 AND 262144");
                         });
                 });
 
@@ -2277,6 +2315,69 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.ToTable("Certificates", "learning", t =>
                         {
                             t.HasCheckConstraint("CK_Certificates_RevocationReason", "([RevokedAtUtc] IS NULL AND [RevocationReason] IS NULL) OR ([RevokedAtUtc] IS NOT NULL AND [RevocationReason] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Learning.CourseReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("EditedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("ModerationReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId", "Status")
+                        .HasDatabaseName("IX_CourseReviews_CourseId_Status");
+
+                    b.HasIndex("UserId", "CourseId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CourseReviews_UserId_CourseId");
+
+                    b.ToTable("CourseReviews", "learning", t =>
+                        {
+                            t.HasCheckConstraint("CK_CourseReviews_ModerationReason", "([Status] = 'Hidden' AND [ModerationReason] IS NOT NULL) OR ([Status] <> 'Hidden' AND [ModerationReason] IS NULL)");
+
+                            t.HasCheckConstraint("CK_CourseReviews_Rating", "[Rating] BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_CourseReviews_Status", "[Status] IN ('Published', 'Hidden', 'Deleted')");
                         });
                 });
 
@@ -2684,6 +2785,31 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_UploadSessions_Status", "[Status] IN ('Requested', 'Uploading', 'Completed', 'Expired', 'Cancelled', 'Failed')");
                         });
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Platform.FeatureFlag", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("FeatureFlags", "platform");
                 });
 
             modelBuilder.Entity("DanielsDojo.Domain.Auditing.AuditLog", b =>
@@ -3151,11 +3277,20 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("DanielsDojo.Domain.Community.ForumPost", "SolvedPost")
+                        .WithMany()
+                        .HasForeignKey("Id", "SolvedPostId")
+                        .HasPrincipalKey("ThreadId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_ForumThreads_SolvedPost_SameThread");
+
                     b.Navigation("Author");
 
                     b.Navigation("Category");
 
                     b.Navigation("Course");
+
+                    b.Navigation("SolvedPost");
                 });
 
             modelBuilder.Entity("DanielsDojo.Domain.Community.FriendRequest", b =>
@@ -3212,6 +3347,17 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                     b.Navigation("Actor");
 
                     b.Navigation("Recipient");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Community.ProfileAvatar", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "User")
+                        .WithOne()
+                        .HasForeignKey("DanielsDojo.Domain.Community.ProfileAvatar", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DanielsDojo.Domain.Community.Report", b =>
@@ -3278,6 +3424,25 @@ namespace DanielsDojo.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("DanielsDojo.Domain.Learning.Certificate", b =>
+                {
+                    b.HasOne("DanielsDojo.Domain.Catalog.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DanielsDojo.Domain.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DanielsDojo.Domain.Learning.CourseReview", b =>
                 {
                     b.HasOne("DanielsDojo.Domain.Catalog.Course", "Course")
                         .WithMany()

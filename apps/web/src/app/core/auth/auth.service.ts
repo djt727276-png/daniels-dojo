@@ -115,6 +115,14 @@ export class AuthService {
   }
 
   /**
+   * Settles the session as signed out without touching any token source. Used at startup
+   * when no authentication is configured, so guards waiting for a settled state never hang.
+   */
+  markSignedOut(): void {
+    this.state.set({ kind: 'signedOut' });
+  }
+
+  /**
    * Loads the session from the API.
    *
    * A 401 or 403 is an ordinary signed-out or refused state, not a crash: the UI shows a

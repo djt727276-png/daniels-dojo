@@ -116,6 +116,30 @@ internal static class ForumEndpoints
             .WithName("SetForumReaction")
             .RequireRateLimiting(RateLimitPolicies.CommunityReaction);
 
+        community.MapPut("/threads/{threadId:guid}/solved", async (
+                Guid threadId,
+                MarkSolvedRequest request,
+                ICurrentUser currentUser,
+                IForumService forum,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await forum.SetSolvedAsync(
+                    currentUser.User!.UserId, threadId, request.PostId, cancellationToken)))
+            .WithName("SetForumThreadSolved")
+            .RequireRateLimiting(RateLimitPolicies.CommunityWrite);
+
+        community.MapGet("/search", async (
+                string q,
+                ICurrentUser currentUser,
+                IForumService forum,
+                CancellationToken cancellationToken,
+                int page = 1,
+                int pageSize = 20) =>
+            OperationResults.ToResponse(
+                await forum.SearchAsync(
+                    currentUser.User!.UserId, q, page, pageSize, cancellationToken)))
+            .WithName("SearchForum");
+
         community.MapPut("/threads/{threadId:guid}/subscription", async (
                 Guid threadId,
                 SubscriptionRequest request,

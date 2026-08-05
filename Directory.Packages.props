@@ -15,6 +15,13 @@
     <!-- API: development-only OpenAPI document generation (.NET 10 built-in). -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <!--
+      Operational telemetry: requests, dependencies, exceptions, and W3C correlation into
+      Application Insights. Activates only when APPLICATIONINSIGHTS_CONNECTION_STRING is
+      present (the deployed environments); locally it is a no-op. The audit trail's
+      correlation id is the same W3C activity id, so database audit rows join to traces.
+    -->
+    <PackageVersion Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.23.0" />
+    <!--
       Transitive pin (CentralPackageTransitivePinningEnabled). Microsoft.AspNetCore.OpenApi
       still resolves Microsoft.OpenApi 2.0.0, which carries GHSA-v5pm-xwqc-g5wc (high).
       2.7.5 is the first patched release. Remove this pin once the framework package
@@ -51,6 +58,13 @@
       where a leaked account key cannot.
     -->
     <PackageVersion Include="Azure.Identity" Version="1.17.2" />
+    <!--
+      Avatar re-encoding. Every uploaded avatar is decoded and re-encoded server-side, so the
+      stored bytes are always produced by this library — never the client's original file,
+      which could carry embedded metadata, polyglot payloads, or an SVG's active content.
+      Pure managed code: no native assets to ship in the Linux container.
+    -->
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <!-- Binding and start-time validation for the provider option sections. -->
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.10" />
@@ -87,6 +101,8 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <!-- Integration tests boot the real host via WebApplicationFactory. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
+    <!-- Exercises the live hub end to end over the test server. -->
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.10" />
   </ItemGroup>
 
 </Project>

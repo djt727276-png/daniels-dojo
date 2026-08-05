@@ -50,7 +50,11 @@ type HomeState =
       <app-page-header
         title="Community"
         description="Ask questions, share what you are building, and help other members."
-      />
+      >
+        <a matButton="outlined" routerLink="/community/search" data-testid="search-link">
+          Search discussions
+        </a>
+      </app-page-header>
 
       @switch (state().kind) {
         @case ('loading') {
@@ -132,6 +136,10 @@ type HomeState =
 
                         @if (thread.isPinned) {
                           <app-status-chip label="Pinned" tone="info" srPrefix="Thread" />
+                        }
+
+                        @if (thread.isSolved) {
+                          <app-status-chip label="Solved" tone="success" srPrefix="Thread" />
                         }
 
                         @if (thread.status !== 'Open') {

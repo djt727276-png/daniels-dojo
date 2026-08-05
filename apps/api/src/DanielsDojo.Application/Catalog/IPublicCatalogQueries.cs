@@ -27,4 +27,7 @@ public interface IPublicCatalogQueries
         string courseSlug,
         string lessonSlug,
         CancellationToken cancellationToken = default);
+
+    /// <summary>The current published membership price, or null while none is live.</summary>
+    Task<PublicPrice?> GetMembershipPriceAsync(CancellationToken cancellationToken = default);
 }

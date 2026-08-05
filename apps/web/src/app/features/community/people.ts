@@ -8,6 +8,7 @@ import { debounceTime } from 'rxjs';
 
 import { toApiFailure } from '../../core/api/problem-details';
 import { CommunityApi, MemberCard } from '../../core/community/community-api';
+import { Avatar } from '../../shared/ui/avatar/avatar';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, LoadingState } from '../../shared/ui/state-views/state-views';
 
@@ -25,6 +26,7 @@ import { EmptyState, LoadingState } from '../../shared/ui/state-views/state-view
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    Avatar,
     PageHeader,
     LoadingState,
     EmptyState,
@@ -60,7 +62,14 @@ import { EmptyState, LoadingState } from '../../shared/ui/state-views/state-view
             <li>
               <mat-card appearance="outlined">
                 <mat-card-content class="dd-stack">
-                  <h2 class="people__handle">{{ member.handle }}</h2>
+                  <div class="people__identity">
+                    <app-avatar
+                      [userId]="member.userId"
+                      [handle]="member.handle"
+                      [hasAvatar]="member.hasAvatar"
+                    />
+                    <h2 class="people__handle">{{ member.handle }}</h2>
+                  </div>
                   @if (member.bio) {
                     <p class="people__bio">{{ member.bio }}</p>
                   }
@@ -118,6 +127,12 @@ import { EmptyState, LoadingState } from '../../shared/ui/state-views/state-view
       margin: 0;
       padding: 0;
       list-style: none;
+    }
+
+    .people__identity {
+      display: flex;
+      align-items: center;
+      gap: var(--dd-space-3);
     }
 
     .people__handle {

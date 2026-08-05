@@ -131,6 +131,15 @@ public enum NotificationKind
 
     /// <summary>A moderation decision affected the member.</summary>
     Moderation,
+
+    /// <summary>An announcement was posted for a course the member holds.</summary>
+    CourseAnnouncement,
+
+    /// <summary>A purchase completed and access was granted.</summary>
+    PurchaseCompleted,
+
+    /// <summary>The member finished a course and earned its certificate.</summary>
+    CourseCompleted,
 }
 
 /// <summary>What a report is about.</summary>

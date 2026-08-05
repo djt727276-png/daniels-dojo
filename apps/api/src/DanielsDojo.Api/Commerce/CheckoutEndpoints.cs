@@ -75,4 +75,34 @@ internal static class CheckoutEndpoints
             .AllowAnonymous()
             .WithName("ReceivePaymentProviderEvent");
     }
+
+    /// <summary>
+    /// Maps the stand-in "pay" action for the deterministic provider — the button on the
+    /// fake checkout page. Mapped only when the deterministic adapter is the configured
+    /// provider, so in every other mode the route does not exist rather than merely
+    /// refusing. Under Stripe, payment happens on Stripe's own hosted page instead.
+    /// </summary>
+    public static void MapDeterministicCheckout(this WebApplication app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        PaymentProviderOptions options = app.Services
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<PaymentProviderOptions>>()
+            .Value;
+
+        if (options.Mode != Domain.Media.ProviderMode.Deterministic)
+        {
+            return;
+        }
+
+        app.MapPost("/api/v1/billing/deterministic/{sessionId}/pay", (
+                string sessionId,
+                IPaymentProvider provider) =>
+            provider is Infrastructure.Commerce.DeterministicPaymentProvider deterministic
+                && deterministic.CompleteCheckout(sessionId)
+                ? Results.NoContent()
+                : Results.NotFound())
+            .RequireAuthorization(AuthenticationRegistration.StudentPolicy)
+            .WithName("CompleteDeterministicCheckout");
+    }
 }

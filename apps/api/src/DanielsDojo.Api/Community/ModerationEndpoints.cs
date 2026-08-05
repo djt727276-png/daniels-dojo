@@ -35,6 +35,17 @@ internal static class ModerationEndpoints
             TypedResults.Ok(await service.ListCategoriesAsync(cancellationToken)))
             .WithName("ListAdminForumCategories");
 
+        moderation.MapPost("/courses/{courseId:guid}/announcements", async (
+                Guid courseId,
+                PostAnnouncementRequest request,
+                ICurrentUser currentUser,
+                IAnnouncementService announcements,
+                CancellationToken cancellationToken) =>
+            OperationResults.ToResponse(
+                await announcements.PostAsync(
+                    currentUser.User!.UserId, courseId, request, cancellationToken)))
+            .WithName("PostCourseAnnouncement");
+
         moderation.MapPost("/categories", async (
                 CreateForumCategoryRequest request,
                 IModerationService service,

@@ -21,6 +21,7 @@ public sealed record ForumThreadSummary(
     bool AuthorHidden,
     string Status,
     bool IsPinned,
+    bool IsSolved,
     int ReplyCount,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset LastActivityAtUtc);
@@ -60,6 +61,8 @@ public sealed record ForumThreadDetail(
     bool IsPinned,
     bool AcceptsReplies,
     bool Subscribed,
+    Guid? SolvedPostId,
+    bool CanMarkSolved,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset LastActivityAtUtc,
     PagedResult<ForumPostView> Posts,
@@ -73,6 +76,27 @@ public sealed record CreatePostRequest(string Body, Guid? ReplyToPostId);
 
 /// <summary>Edits an existing post.</summary>
 public sealed record UpdatePostRequest(string Body, string RowVersion);
+
+/// <summary>
+/// Chooses a reply as the thread's accepted answer, or clears the choice with a null
+/// <paramref name="PostId"/>.
+/// </summary>
+public sealed record MarkSolvedRequest(Guid? PostId);
+
+/// <summary>
+/// One search hit: a thread, plus a short plain-text excerpt of the first matching post.
+/// The excerpt obeys the same withholding rules as the thread itself — a tombstoned or
+/// blocked-author body is never quoted.
+/// </summary>
+public sealed record ForumSearchResult(
+    Guid ThreadId,
+    string Title,
+    string CategorySlug,
+    string CategoryName,
+    string Status,
+    bool IsSolved,
+    string? Snippet,
+    DateTimeOffset LastActivityAtUtc);
 
 /// <summary>Reports a profile, thread, post, or message.</summary>
 public sealed record CreateReportRequest(

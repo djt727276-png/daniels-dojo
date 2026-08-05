@@ -55,6 +55,18 @@ internal sealed class CommunityAccessEvaluator(DanielsDojoDbContext context)
             _ => CommunityAccessDenial.None,
         };
 
+        // The operator kill switch is checked last, so an individual denial keeps its more
+        // specific message. A missing row means the default: writes are on.
+        if (denial == CommunityAccessDenial.None
+            && await context.FeatureFlags
+                .AsNoTracking()
+                .Where(flag => flag.Key == "community-writes")
+                .Select(flag => (bool?)flag.Enabled)
+                .FirstOrDefaultAsync(cancellationToken) == false)
+        {
+            denial = CommunityAccessDenial.WritesPaused;
+        }
+
         return new CommunityAccess(
             denial == CommunityAccessDenial.None,
             denial,

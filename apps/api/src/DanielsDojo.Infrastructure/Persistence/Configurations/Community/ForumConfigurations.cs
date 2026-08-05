@@ -77,6 +77,16 @@ internal sealed class ForumThreadConfiguration : IEntityTypeConfiguration<ForumT
             .HasForeignKey(thread => thread.AuthorUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Composite foreign key onto the posts' (ThreadId, Id) alternate key: the accepted
+        // answer can only ever be a post of this same thread — the database rejects a
+        // cross-thread answer rather than trusting application code to check.
+        builder.HasOne(thread => thread.SolvedPost)
+            .WithMany()
+            .HasForeignKey(thread => new { thread.Id, thread.SolvedPostId })
+            .HasPrincipalKey(post => new { post.ThreadId, post.Id })
+            .OnDelete(DeleteBehavior.Restrict)
+            .HasConstraintName("FK_ForumThreads_SolvedPost_SameThread");
+
         // Category listings are ordered pinned-first then by recency.
         builder.HasIndex(thread => new { thread.CategoryId, thread.IsPinned, thread.LastActivityAtUtc })
             .HasDatabaseName("IX_ForumThreads_CategoryId_IsPinned_LastActivityAtUtc");

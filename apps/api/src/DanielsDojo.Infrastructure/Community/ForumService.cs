@@ -43,15 +43,18 @@ internal sealed class ForumService : IForumService
     private readonly DanielsDojoDbContext context;
     private readonly ICommunityAccessEvaluator accessEvaluator;
     private readonly TimeProvider timeProvider;
+    private readonly IRealtimeNotifier realtime;
 
     public ForumService(
         DanielsDojoDbContext context,
         ICommunityAccessEvaluator accessEvaluator,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IRealtimeNotifier realtime)
     {
         this.context = context;
         this.accessEvaluator = accessEvaluator;
         this.timeProvider = timeProvider;
+        this.realtime = realtime;
     }
 
     // ------------------------------------------------------------------ reading
@@ -104,6 +107,7 @@ internal sealed class ForumService : IForumService
                     .FirstOrDefault(),
                 thread.Status,
                 thread.IsPinned,
+                IsSolved = thread.SolvedPostId != null,
                 ReplyCount = thread.Posts.Count(post => post.Status != ForumPostStatus.Removed) - 1,
                 thread.CreatedAtUtc,
                 thread.LastActivityAtUtc,
@@ -123,6 +127,7 @@ internal sealed class ForumService : IForumService
                     authorHidden,
                     row.Status.ToString(),
                     row.IsPinned,
+                    row.IsSolved,
                     Math.Max(row.ReplyCount, 0),
                     row.CreatedAtUtc,
                     row.LastActivityAtUtc);
@@ -176,6 +181,7 @@ internal sealed class ForumService : IForumService
                     .FirstOrDefault(),
                 thread.Status,
                 thread.IsPinned,
+                IsSolved = thread.SolvedPostId != null,
                 ReplyCount = thread.Posts.Count(post => post.Status != ForumPostStatus.Removed) - 1,
                 thread.CreatedAtUtc,
                 thread.LastActivityAtUtc,
@@ -195,6 +201,7 @@ internal sealed class ForumService : IForumService
                     authorHidden,
                     row.Status.ToString(),
                     row.IsPinned,
+                    row.IsSolved,
                     Math.Max(row.ReplyCount, 0),
                     row.CreatedAtUtc,
                     row.LastActivityAtUtc);
@@ -361,9 +368,16 @@ internal sealed class ForumService : IForumService
         thread.LastActivityAtUtc = now;
         thread.UpdatedAtUtc = now;
 
-        await NotifySubscribersAsync(threadId, authorUserId, post.Id, now, cancellationToken);
+        List<Guid> notified = await NotifySubscribersAsync(
+            threadId, authorUserId, post.Id, now, cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Persisted first, rung after: recipients refetch their inbox over REST.
+        foreach (Guid recipient in notified)
+        {
+            await realtime.UnreadChangedAsync(recipient, cancellationToken);
+        }
 
         return await BuildThreadAsync(authorUserId, threadId, LastPage(threadId), DefaultPageSize, cancellationToken);
     }
@@ -487,6 +501,7 @@ internal sealed class ForumService : IForumService
             cancellationToken);
 
         DateTimeOffset now = timeProvider.GetUtcNow();
+        Guid? rung = null;
 
         if (liked && existing is null)
         {
@@ -503,6 +518,7 @@ internal sealed class ForumService : IForumService
                 && !await IsBlockedEitherWayAsync(userId, post.AuthorUserId, cancellationToken))
             {
                 AddNotification(post.AuthorUserId, userId, NotificationKind.PostReaction, "Post", postId, now);
+                rung = post.AuthorUserId;
             }
         }
         else if (!liked && existing is not null)
@@ -511,6 +527,11 @@ internal sealed class ForumService : IForumService
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (rung is { } recipient)
+        {
+            await realtime.UnreadChangedAsync(recipient, cancellationToken);
+        }
 
         return await BuildThreadAsync(userId, post.ThreadId, 1, DefaultPageSize, cancellationToken);
     }
@@ -560,6 +581,160 @@ internal sealed class ForumService : IForumService
         await context.SaveChangesAsync(cancellationToken);
 
         return await BuildThreadAsync(userId, threadId, 1, DefaultPageSize, cancellationToken);
+    }
+
+    public async Task<OperationResult<ForumThreadDetail>> SetSolvedAsync(
+        Guid userId,
+        Guid threadId,
+        Guid? postId,
+        CancellationToken cancellationToken = default)
+    {
+        OperationResult? denied = await RequireParticipationAsync(userId, cancellationToken);
+
+        if (denied is not null)
+        {
+            return denied.ToFailure<ForumThreadDetail>();
+        }
+
+        ForumThread? thread = await context.ForumThreads
+            .FirstOrDefaultAsync(candidate => candidate.Id == threadId, cancellationToken);
+
+        if (thread is null || thread.Status == ForumThreadStatus.Removed)
+        {
+            return OperationResult.NotFound().ToFailure<ForumThreadDetail>();
+        }
+
+        // Only the person who asked the question decides what answered it. Anybody else is
+        // told the thread is missing rather than which threads they don't own.
+        if (thread.AuthorUserId != userId)
+        {
+            return OperationResult.NotFound().ToFailure<ForumThreadDetail>();
+        }
+
+        if (postId is { } answerId)
+        {
+            ForumPost? answer = await context.ForumPosts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    post => post.Id == answerId && post.ThreadId == threadId, cancellationToken);
+
+            if (answer is null || answer.Status == ForumPostStatus.Removed)
+            {
+                return OperationResult.Invalid(
+                    ErrorCodes.ValidationFailed,
+                    "postId",
+                    "Choose a reply in this thread.").ToFailure<ForumThreadDetail>();
+            }
+
+            // The opening post is the question; an answer must be a reply.
+            bool isOpeningPost = !await context.ForumPosts.AnyAsync(
+                post => post.ThreadId == threadId
+                    && (post.CreatedAtUtc < answer.CreatedAtUtc
+                        || (post.CreatedAtUtc == answer.CreatedAtUtc && post.Id.CompareTo(answer.Id) < 0)),
+                cancellationToken);
+
+            if (isOpeningPost)
+            {
+                return OperationResult.Invalid(
+                    ErrorCodes.ValidationFailed,
+                    "postId",
+                    "The opening post is the question — choose one of the replies.")
+                    .ToFailure<ForumThreadDetail>();
+            }
+
+            thread.SolvedPostId = answerId;
+        }
+        else
+        {
+            thread.SolvedPostId = null;
+        }
+
+        thread.UpdatedAtUtc = timeProvider.GetUtcNow();
+        await context.SaveChangesAsync(cancellationToken);
+
+        return await BuildThreadAsync(userId, threadId, 1, DefaultPageSize, cancellationToken);
+    }
+
+    public async Task<OperationResult<PagedResult<ForumSearchResult>>> SearchAsync(
+        Guid readerUserId,
+        string query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        string trimmed = (query ?? string.Empty).Trim();
+
+        if (trimmed.Length < 2 || trimmed.Length > 100)
+        {
+            return OperationResult.Invalid(
+                ErrorCodes.ValidationFailed,
+                "q",
+                "Search with between 2 and 100 characters.")
+                .ToFailure<PagedResult<ForumSearchResult>>();
+        }
+
+        // The caller's text is data, never pattern: LIKE wildcards are escaped so nobody can
+        // turn a search box into a pattern-matching probe.
+        string pattern = $"%{EscapeLike(trimmed)}%";
+
+        IQueryable<ForumThread> matches = context.ForumThreads
+            .AsNoTracking()
+            .Where(thread => thread.Status != ForumThreadStatus.Removed
+                && thread.Category!.Status == ForumCategoryStatus.Active)
+            .Where(thread => EF.Functions.Like(thread.Title, pattern, "\\")
+                || thread.Posts.Any(post => post.Status != ForumPostStatus.Removed
+                    && EF.Functions.Like(post.Body, pattern, "\\")));
+
+        int totalCount = await matches.CountAsync(cancellationToken);
+        (int currentPage, int size) = Paging(page, pageSize);
+        HashSet<Guid> hidden = await HiddenAuthorsAsync(readerUserId, cancellationToken);
+
+        var rows = await matches
+            .OrderByDescending(thread => thread.LastActivityAtUtc)
+            .ThenBy(thread => thread.Id)
+            .Skip((currentPage - 1) * size)
+            .Take(size)
+            .Select(thread => new
+            {
+                thread.Id,
+                thread.Title,
+                CategorySlug = thread.Category!.Slug,
+                CategoryName = thread.Category.Name,
+                thread.Status,
+                IsSolved = thread.SolvedPostId != null,
+                thread.LastActivityAtUtc,
+
+                // The first matching, still-published post supplies the excerpt. Its author
+                // is carried along so a blocked member's words are never quoted back.
+                Match = thread.Posts
+                    .Where(post => post.Status != ForumPostStatus.Removed
+                        && EF.Functions.Like(post.Body, pattern, "\\"))
+                    .OrderBy(post => post.CreatedAtUtc)
+                    .Select(post => new { post.Body, post.AuthorUserId })
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(cancellationToken);
+
+        List<ForumSearchResult> items = rows
+            .Select(row => new ForumSearchResult(
+                row.Id,
+                row.Title,
+                row.CategorySlug,
+                row.CategoryName,
+                row.Status.ToString(),
+                row.IsSolved,
+                row.Match is null || hidden.Contains(row.Match.AuthorUserId)
+                    ? null
+                    : Snippet(row.Match.Body, trimmed),
+                row.LastActivityAtUtc))
+            .ToList();
+
+        return OperationResult.FromValue(new PagedResult<ForumSearchResult>(
+            items,
+            currentPage,
+            size,
+            totalCount,
+            size == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)size)));
     }
 
     public async Task<OperationResult> ReportAsync(
@@ -645,6 +820,30 @@ internal sealed class ForumService : IForumService
 
     // ------------------------------------------------------------------ shared helpers
 
+    /// <summary>Escapes LIKE wildcards so user text always matches literally.</summary>
+    private static string EscapeLike(string value) =>
+        value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal)
+            .Replace("[", "\\[", StringComparison.Ordinal);
+
+    /// <summary>A short excerpt centred on the first occurrence of the query.</summary>
+    private static string Snippet(string body, string query)
+    {
+        const int Window = 160;
+
+        int index = body.IndexOf(query, StringComparison.OrdinalIgnoreCase);
+        int start = Math.Max(0, (index < 0 ? 0 : index) - Window / 4);
+        int length = Math.Min(Window, body.Length - start);
+
+        string excerpt = body.Substring(start, length);
+
+        return (start > 0 ? "…" : string.Empty)
+            + excerpt
+            + (start + length < body.Length ? "…" : string.Empty);
+    }
+
     /// <summary>Clears a body and records the tombstone, keeping the row for continuity.</summary>
     internal static void Tombstone(ForumPost post, DateTimeOffset now)
     {
@@ -705,8 +904,11 @@ internal sealed class ForumService : IForumService
                 context.DirectMessages.AnyAsync(message => message.Id == targetId, cancellationToken),
         };
 
-    /// <summary>Queues a reply notification for every subscriber except the author.</summary>
-    private async Task NotifySubscribersAsync(
+    /// <summary>
+    /// Queues a reply notification for every subscriber except the author, returning who was
+    /// notified so the caller can ring them after the save commits.
+    /// </summary>
+    private async Task<List<Guid>> NotifySubscribersAsync(
         Guid threadId,
         Guid authorUserId,
         Guid postId,
@@ -723,7 +925,7 @@ internal sealed class ForumService : IForumService
 
         if (subscribers.Count == 0)
         {
-            return;
+            return subscribers;
         }
 
         // A block silences the notification in both directions, so neither member is pulled
@@ -734,10 +936,14 @@ internal sealed class ForumService : IForumService
             .Select(block => block.BlockerUserId == authorUserId ? block.BlockedUserId : block.BlockerUserId)
             .ToListAsync(cancellationToken)];
 
-        foreach (Guid subscriber in subscribers.Where(id => !blocked.Contains(id)))
+        List<Guid> notified = [.. subscribers.Where(id => !blocked.Contains(id))];
+
+        foreach (Guid subscriber in notified)
         {
             AddNotification(subscriber, authorUserId, NotificationKind.ThreadReply, "Post", postId, now);
         }
+
+        return notified;
     }
 
     private void AddNotification(
@@ -798,6 +1004,7 @@ internal sealed class ForumService : IForumService
                     .FirstOrDefault(),
                 candidate.Status,
                 candidate.IsPinned,
+                candidate.SolvedPostId,
                 candidate.CreatedAtUtc,
                 candidate.LastActivityAtUtc,
                 candidate.RowVersion,
@@ -886,6 +1093,8 @@ internal sealed class ForumService : IForumService
             thread.IsPinned,
             thread.Status == ForumThreadStatus.Open,
             subscribed,
+            thread.SolvedPostId,
+            thread.AuthorUserId == readerUserId,
             thread.CreatedAtUtc,
             thread.LastActivityAtUtc,
             new PagedResult<ForumPostView>(

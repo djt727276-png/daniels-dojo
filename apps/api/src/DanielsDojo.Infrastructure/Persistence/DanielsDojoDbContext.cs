@@ -97,8 +97,17 @@ public sealed class DanielsDojoDbContext(DbContextOptions<DanielsDojoDbContext> 
     /// <summary>Course-completion certificates.</summary>
     public DbSet<Certificate> Certificates => Set<Certificate>();
 
+    /// <summary>Student course reviews.</summary>
+    public DbSet<CourseReview> CourseReviews => Set<CourseReview>();
+
     /// <summary>Community profiles.</summary>
     public DbSet<CommunityProfile> CommunityProfiles => Set<CommunityProfile>();
+
+    /// <summary>Member avatars, re-encoded server-side.</summary>
+    public DbSet<ProfileAvatar> ProfileAvatars => Set<ProfileAvatar>();
+
+    /// <summary>Operator-controlled feature switches.</summary>
+    public DbSet<Domain.Platform.FeatureFlag> FeatureFlags => Set<Domain.Platform.FeatureFlag>();
 
     /// <summary>Forum categories.</summary>
     public DbSet<ForumCategory> ForumCategories => Set<ForumCategory>();

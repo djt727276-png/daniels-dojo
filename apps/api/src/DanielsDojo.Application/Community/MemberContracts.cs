@@ -4,6 +4,7 @@ namespace DanielsDojo.Application.Community;
 public sealed record MyCommunityProfile(
     string Handle,
     string? Bio,
+    bool HasAvatar,
     bool IsDiscoverable,
     string FriendRequestPolicy,
     string MessagePolicy,

@@ -81,6 +81,23 @@ public interface IForumService
         bool subscribed,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Marks a reply as the thread's accepted answer, or clears it. Thread author only.
+    /// </summary>
+    Task<OperationResult<ForumThreadDetail>> SetSolvedAsync(
+        Guid userId,
+        Guid threadId,
+        Guid? postId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Searches thread titles and published post bodies.</summary>
+    Task<OperationResult<PagedResult<ForumSearchResult>>> SearchAsync(
+        Guid readerUserId,
+        string query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Files a report for moderator review.</summary>
     Task<OperationResult> ReportAsync(
         Guid reporterUserId,

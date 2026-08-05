@@ -1,10 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { RouterLink } from '@angular/router';
 
 import { toApiFailure } from '../../core/api/problem-details';
 import { CommunityApi, NotificationView } from '../../core/community/community-api';
+import { RealtimeService } from '../../core/community/realtime';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 
@@ -18,17 +20,21 @@ import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-view
 function targetRoute(notification: NotificationView): readonly string[] | null {
   switch (notification.targetType) {
     case 'Post':
-    case 'Thread':
       // A post id has no route of its own, so this lands on the community page where the
       // thread it belongs to is listed under recent discussion.
       return ['/community'];
+    case 'Thread':
+      return ['/community/t', notification.targetId];
     case 'Conversation':
       return ['/messages', notification.targetId];
     case 'FriendRequest':
     case 'Friendship':
       return ['/friends'];
     case 'Profile':
+    case 'Order':
       return ['/account'];
+    case 'Certificate':
+      return ['/certificates'];
     default:
       return null;
   }
@@ -43,7 +49,12 @@ function targetLabel(notification: NotificationView): string {
     case 'Friendship':
       return 'Open friends';
     case 'Profile':
+    case 'Order':
       return 'Open your account';
+    case 'Certificate':
+      return 'See your certificates';
+    case 'Thread':
+      return 'Read the announcement';
     default:
       return 'Open the community';
   }
@@ -66,6 +77,12 @@ function describe(notification: NotificationView): string {
       return `${who} sent you a message.`;
     case 'Moderation':
       return 'A moderator took action on something of yours.';
+    case 'CourseAnnouncement':
+      return 'An announcement was posted for one of your courses.';
+    case 'PurchaseCompleted':
+      return 'Your purchase completed — your access is ready.';
+    case 'CourseCompleted':
+      return 'You finished a course and earned its certificate. Congratulations!';
     default:
       return 'Something happened.';
   }
@@ -189,6 +206,7 @@ function describe(notification: NotificationView): string {
 })
 export class Notifications {
   private readonly api = inject(CommunityApi);
+  private readonly realtime = inject(RealtimeService);
 
   protected readonly describe = describe;
   protected readonly route = targetRoute;
@@ -201,6 +219,19 @@ export class Notifications {
 
   constructor() {
     this.load();
+
+    // The doorbell says only "changed"; the inbox itself is refetched from REST.
+    this.realtime.connect();
+    this.realtime.unreadChanged.pipe(takeUntilDestroyed()).subscribe(() => this.refresh());
+    this.realtime.reconnected.pipe(takeUntilDestroyed()).subscribe(() => this.refresh());
+  }
+
+  /** Live update: refetch quietly, without blanking the inbox behind a spinner. */
+  private refresh(): void {
+    this.api.listNotifications().subscribe({
+      next: (page) => this.notifications.set(page.items),
+      error: () => undefined,
+    });
   }
 
   protected load(): void {
