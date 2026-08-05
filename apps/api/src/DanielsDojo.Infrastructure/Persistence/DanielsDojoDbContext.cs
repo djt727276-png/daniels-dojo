@@ -106,6 +106,9 @@ public sealed class DanielsDojoDbContext(DbContextOptions<DanielsDojoDbContext> 
     /// <summary>Member avatars, re-encoded server-side.</summary>
     public DbSet<ProfileAvatar> ProfileAvatars => Set<ProfileAvatar>();
 
+    /// <summary>Operator-controlled feature switches.</summary>
+    public DbSet<Domain.Platform.FeatureFlag> FeatureFlags => Set<Domain.Platform.FeatureFlag>();
+
     /// <summary>Forum categories.</summary>
     public DbSet<ForumCategory> ForumCategories => Set<ForumCategory>();
 

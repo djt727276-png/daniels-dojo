@@ -155,6 +155,15 @@ function describeAction(entry: AuditActivityEntry): string {
                 {{ view.forumCategories }} forum
                 {{ view.forumCategories === 1 ? 'category' : 'categories' }}
               </a>
+              <a routerLink="/admin/users" data-testid="link-users">
+                Members — accounts, roles, and manual grants
+              </a>
+              <a routerLink="/admin/records" data-testid="link-records">
+                Records — certificates, orders, payment events, audit trail
+              </a>
+              <a routerLink="/admin/ops" data-testid="link-ops">
+                Operations — runtime, switches, and announcements
+              </a>
             </mat-card-content>
           </mat-card>
         </section>

@@ -17,6 +17,9 @@ public enum CommunityAccessDenial
 
     /// <summary>The platform account is disabled.</summary>
     AccountDisabled,
+
+    /// <summary>An operator switched community writes off platform-wide.</summary>
+    WritesPaused,
 }
 
 /// <summary>
@@ -43,6 +46,8 @@ public sealed record CommunityAccess(
             "Your community profile is deactivated. Reactivate it to take part again.",
         CommunityAccessDenial.AccountDisabled =>
             "This account cannot take part in the community.",
+        CommunityAccessDenial.WritesPaused =>
+            "The community is read-only right now while maintenance is under way.",
         _ => null,
     };
 }

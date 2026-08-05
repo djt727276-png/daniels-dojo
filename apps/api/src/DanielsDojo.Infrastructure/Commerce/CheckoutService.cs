@@ -66,6 +66,20 @@ internal sealed class CheckoutService : ICheckoutService
                 .ToFailure<CheckoutStarted>();
         }
 
+        // Operator kill switch, checked at the door. A missing row means the default: on.
+        // Access already granted is untouched — only new checkouts are refused.
+        if (await context.FeatureFlags
+                .AsNoTracking()
+                .Where(flag => flag.Key == "checkout")
+                .Select(flag => (bool?)flag.Enabled)
+                .FirstOrDefaultAsync(cancellationToken) == false)
+        {
+            return OperationResult.Conflict(
+                CommerceErrorCodes.ProviderDisabled,
+                "Purchasing is paused right now. Please try again later.")
+                .ToFailure<CheckoutStarted>();
+        }
+
         Offer? offer = await context.Offers
             .AsNoTracking()
             .Include(candidate => candidate.Prices)

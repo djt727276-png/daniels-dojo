@@ -1,3 +1,4 @@
+using DanielsDojo.Api.Admin;
 using DanielsDojo.Api.Authentication;
 using DanielsDojo.Api.Catalog;
 using DanielsDojo.Api.Commerce;
@@ -163,6 +164,9 @@ apiV1.MapModerationEndpoints();
 
 // The member's rights over their own data: export and deletion.
 apiV1.MapPrivacyEndpoints();
+
+// The operator's back office: accounts, records, switches, and what is running.
+apiV1.MapAdminOperationsEndpoints();
 
 // Authenticated session view. Every value comes from the local user record resolved by the
 // provisioning middleware, never from the token.

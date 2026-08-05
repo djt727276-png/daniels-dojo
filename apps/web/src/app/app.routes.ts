@@ -166,6 +166,26 @@ export const routes: Routes = [
     title: "Lesson video — Daniel's Dojo",
   },
   {
+    path: 'admin/users',
+    loadComponent: () =>
+      import('./features/admin/operations/admin-users').then((m) => m.AdminUsers),
+    canActivate: [authenticatedGuard, adminGuard],
+    title: "Members — Daniel's Dojo",
+  },
+  {
+    path: 'admin/records',
+    loadComponent: () =>
+      import('./features/admin/operations/admin-records').then((m) => m.AdminRecords),
+    canActivate: [authenticatedGuard, adminGuard],
+    title: "Records — Daniel's Dojo",
+  },
+  {
+    path: 'admin/ops',
+    loadComponent: () => import('./features/admin/operations/admin-ops').then((m) => m.AdminOps),
+    canActivate: [authenticatedGuard, adminGuard],
+    title: "Operations — Daniel's Dojo",
+  },
+  {
     path: 'admin/pricing',
     loadComponent: () =>
       import('./features/admin/pricing/admin-pricing').then((m) => m.AdminPricing),
