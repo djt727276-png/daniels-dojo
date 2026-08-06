@@ -37,6 +37,7 @@ public sealed class AuthenticatedApiFactory : WebApplicationFactory<Program>
         "Authentication__EntraExternalId__RequiredScope",
         "Authentication__EntraExternalId__AllowedClientIds__0",
         "Authentication__EntraExternalId__EmailClaimName",
+        "Authentication__EntraExternalId__EmailVerifiedByUserFlow",
         "Authentication__EntraExternalId__AllowedCorsOrigin",
         "Media__Storage__Mode",
         "Media__Video__Mode",
@@ -47,7 +48,10 @@ public sealed class AuthenticatedApiFactory : WebApplicationFactory<Program>
     private readonly Dictionary<string, string?> _previousValues = [];
     private readonly TestTokenIssuer _tokenIssuer;
 
-    public AuthenticatedApiFactory(string connectionString, TestTokenIssuer tokenIssuer)
+    public AuthenticatedApiFactory(
+        string connectionString,
+        TestTokenIssuer tokenIssuer,
+        bool emailVerifiedByUserFlow = false)
     {
         _tokenIssuer = tokenIssuer;
 
@@ -64,6 +68,9 @@ public sealed class AuthenticatedApiFactory : WebApplicationFactory<Program>
         Set("Authentication__EntraExternalId__RequiredScope", TestTokenIssuer.RequiredScope);
         Set("Authentication__EntraExternalId__AllowedClientIds__0", TestTokenIssuer.SpaClientId);
         Set("Authentication__EntraExternalId__EmailClaimName", TestTokenIssuer.EmailClaim);
+        Set(
+            "Authentication__EntraExternalId__EmailVerifiedByUserFlow",
+            emailVerifiedByUserFlow ? "true" : "false");
         Set("Authentication__EntraExternalId__AllowedCorsOrigin", "http://localhost:4200");
 
         // Deterministic media in every suite. The whole pipeline — authorise, upload, verify,

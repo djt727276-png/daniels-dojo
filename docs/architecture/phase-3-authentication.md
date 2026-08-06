@@ -118,6 +118,14 @@ The local ownership key is the **immutable pair (`tid`, `oid`)**, stored in the 
 | `name` | `DisplayName` |
 | `email_verified` | `EmailVerified` |
 
+**External ID never emits `email_verified`.** Its email one-time-passcode user flows verify
+the address at sign-up, then issue tokens with no verification claim at all — which once left
+every production customer stored as unverified and silently prevented the admin bootstrap from
+ever running. A deployment on such a tenant sets
+`Authentication:EntraExternalId:EmailVerifiedByUserFlow` to `true`, which treats a token that
+carries the configured email claim but no verification claim as verified. An explicit
+`email_verified: false` from the provider still wins, and the option never invents an address.
+
 Email is deliberately **not** the key. A customer can change their address, two provider
 identities may legitimately present the same one, and an attacker who can set an email claim
 could otherwise take over an existing account. `sub` is also unsuitable — it is pairwise per
