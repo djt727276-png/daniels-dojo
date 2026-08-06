@@ -5,8 +5,23 @@
 .hero {
   position: relative;
   overflow: hidden;
-  background: var(--dd-ink, var(--dd-background));
+
+  /* The gate at night is the identity in both themes: the hero stays ink even
+     in light mode, so its foreground is pinned rather than themed. */
+  background: #090d18;
   border-bottom: 1px solid var(--dd-outline);
+}
+
+.hero__title {
+  color: #f7f8fc;
+}
+
+.hero__lead {
+  color: #a6aec6;
+}
+
+.hero__grid {
+  --dd-outline: #2a3350;
 }
 
 .hero__atmosphere {
@@ -98,10 +113,13 @@ a.hero__cta:hover {
   background: color-mix(in srgb, var(--dd-gold) 88%, white);
 }
 
+/* Outlined secondary sits on the pinned-ink hero, so its colours are pinned too. */
 a.hero__secondary {
   min-height: 3rem;
   border-radius: var(--dd-radius-sm);
   padding-inline: var(--dd-space-5);
+  color: #6ea8ff;
+  border-color: #3d4870;
 }
 
 /* --- Pillars --------------------------------------------------------------- */

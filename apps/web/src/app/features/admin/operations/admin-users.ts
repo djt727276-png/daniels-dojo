@@ -20,7 +20,7 @@ import {
   ConfirmDialogResult,
 } from '../../../shared/ui/confirm-dialog/confirm-dialog';
 import { PageHeader } from '../../../shared/ui/page-header/page-header';
-import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/state-views/state-views';
+import { EmptyState, LoadingState } from '../../../shared/ui/state-views/state-views';
 import { StatusChip } from '../../../shared/ui/status-chip/status-chip';
 
 /**
@@ -45,7 +45,6 @@ import { StatusChip } from '../../../shared/ui/status-chip/status-chip';
     StatusChip,
     LoadingState,
     EmptyState,
-    ErrorState,
   ],
   template: `
     <div class="dd-page dd-stack">
