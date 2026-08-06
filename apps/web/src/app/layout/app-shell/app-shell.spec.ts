@@ -4,7 +4,14 @@ import { signal } from '@angular/core';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { Session } from '../../core/auth/session.model';
+import { UnreadStatusService } from '../../core/community/unread-status.service';
 import { AppShell } from './app-shell';
+
+/** Badge counts without HTTP or SignalR: zeros unless a test sets them. */
+class UnreadStatusStub {
+  readonly notifications = signal(0);
+  readonly conversations = signal(0);
+}
 
 /**
  * Stands in for the real service so the shell tests stay free of MSAL and HTTP. Admin
@@ -29,7 +36,11 @@ function setup() {
 
   TestBed.configureTestingModule({
     imports: [AppShell],
-    providers: [provideRouter([]), { provide: AuthService, useValue: auth }],
+    providers: [
+      provideRouter([]),
+      { provide: AuthService, useValue: auth },
+      { provide: UnreadStatusService, useValue: new UnreadStatusStub() },
+    ],
   });
 
   return { auth, fixture: TestBed.createComponent(AppShell) };

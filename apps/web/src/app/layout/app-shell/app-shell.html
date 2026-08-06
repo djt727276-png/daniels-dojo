@@ -3,7 +3,7 @@
 <app-dev-auth-banner />
 
 <!-- role="banner" keeps the site-header landmark that a bare mat-toolbar would not expose. -->
-<mat-toolbar class="app-toolbar" color="primary" role="banner">
+<mat-toolbar class="app-toolbar" role="banner">
   @if (!isWide()) {
     <button
       matIconButton
@@ -15,39 +15,73 @@
       (click)="toggleDrawer()"
       data-testid="nav-toggle"
     >
-      <span aria-hidden="true" class="app-toolbar__menu-glyph">☰</span>
+      <dd-icon name="menu" [size]="22" />
     </button>
   }
 
-  <a routerLink="/" class="app-toolbar__brand">{{ productName }}</a>
+  <a routerLink="/" class="app-toolbar__brand" aria-label="Daniel's Dojo home">
+    <dd-logo variant="lockup" />
+    <span class="dd-visually-hidden">{{ productName }}</span>
+  </a>
 
   <span class="app-toolbar__spacer"></span>
+
+  @if (session()) {
+    <a
+      matIconButton
+      routerLink="/community/search"
+      class="app-toolbar__action"
+      aria-label="Search discussions"
+      matTooltip="Search discussions"
+      data-testid="nav-search"
+    >
+      <dd-icon name="search" [size]="21" />
+    </a>
+  }
 
   <!-- One control, three states: system, dark, light. The glyph mirrors the current
        preference; the label always says what pressing it does next. -->
   <button
     matIconButton
     type="button"
-    class="app-toolbar__theme"
+    class="app-toolbar__action"
     [attr.aria-label]="theme.nextLabel()"
     [matTooltip]="theme.nextLabel()"
     (click)="theme.cycle()"
     data-testid="theme-toggle"
   >
-    <span aria-hidden="true" class="app-toolbar__theme-glyph">
-      @switch (theme.preference()) {
-        @case ('dark') {
-          ◒
-        }
-        @case ('light') {
-          ☀
-        }
-        @default {
-          ◐
-        }
+    @switch (theme.preference()) {
+      @case ('dark') {
+        <dd-icon name="moon" [size]="21" />
       }
-    </span>
+      @case ('light') {
+        <dd-icon name="sun" [size]="21" />
+      }
+      @default {
+        <dd-icon name="contrast" [size]="21" />
+      }
+    }
   </button>
+
+  @if (session()) {
+    <a
+      matIconButton
+      routerLink="/notifications"
+      class="app-toolbar__action"
+      [attr.aria-label]="
+        unread.notifications() > 0
+          ? 'Notifications, ' + unread.notifications() + ' unread'
+          : 'Notifications'
+      "
+      matTooltip="Notifications"
+      data-testid="nav-bell"
+    >
+      <dd-icon name="bell" [size]="21" />
+      @if (unread.notifications() > 0) {
+        <span class="app-badge" aria-hidden="true">{{ badge(unread.notifications()) }}</span>
+      }
+    </a>
+  }
 
   @if (session(); as current) {
     <button
@@ -57,19 +91,34 @@
       class="app-toolbar__account"
       data-testid="account-menu-trigger"
     >
+      <span class="app-toolbar__avatar" aria-hidden="true">{{
+        current.displayName.charAt(0).toUpperCase()
+      }}</span>
       <span class="app-toolbar__account-name">{{ current.displayName }}</span>
+      @if (isAdmin()) {
+        <span class="app-toolbar__role">Admin</span>
+      }
     </button>
 
     <mat-menu #accountMenu="matMenu">
-      <a mat-menu-item routerLink="/account" data-testid="nav-account">Account</a>
-      <a mat-menu-item routerLink="/dashboard">Dashboard</a>
+      <a mat-menu-item routerLink="/account" data-testid="nav-account">
+        <span class="app-menu-line"><dd-icon name="user" [size]="18" /> Account</span>
+      </a>
+      <a mat-menu-item routerLink="/dashboard">
+        <span class="app-menu-line"><dd-icon name="compass" [size]="18" /> Dashboard</span>
+      </a>
+      @if (isAdmin()) {
+        <a mat-menu-item routerLink="/admin">
+          <span class="app-menu-line"><dd-icon name="shield" [size]="18" /> Admin</span>
+        </a>
+      }
       <mat-divider />
       <button mat-menu-item type="button" (click)="signOut()" data-testid="sign-out">
-        Sign out
+        <span class="app-menu-line"><dd-icon name="logout" [size]="18" /> Sign out</span>
       </button>
     </mat-menu>
   } @else {
-    <a matButton routerLink="/account" class="app-toolbar__account" data-testid="nav-account">
+    <a matButton routerLink="/account" class="app-toolbar__signin" data-testid="nav-account">
       Sign in
     </a>
   }
@@ -95,14 +144,15 @@
               [attr.data-testid]="item.testId"
               (click)="onNavigate()"
             >
-              {{ item.label }}
+              <dd-icon [name]="item.icon" [size]="19" />
+              <span>{{ item.label }}</span>
             </a>
           </li>
         }
       </ul>
 
       @if (session()) {
-        <h2 class="app-nav__heading" id="nav-member-heading">Your area</h2>
+        <h2 class="app-nav__heading" id="nav-member-heading">Your dojo</h2>
         <ul class="app-nav__list" aria-labelledby="nav-member-heading">
           @for (item of memberNav; track item.route) {
             <li>
@@ -113,7 +163,15 @@
                 [attr.data-testid]="item.testId"
                 (click)="onNavigate()"
               >
-                {{ item.label }}
+                <dd-icon [name]="item.icon" [size]="19" />
+                <span>{{ item.label }}</span>
+                @if (item.route === '/messages' && unread.conversations() > 0) {
+                  <span class="app-nav__badge">{{ badge(unread.conversations()) }}</span>
+                  <span class="dd-visually-hidden">{{ unread.conversations() }} unread</span>
+                } @else if (item.route === '/notifications' && unread.notifications() > 0) {
+                  <span class="app-nav__badge">{{ badge(unread.notifications()) }}</span>
+                  <span class="dd-visually-hidden">{{ unread.notifications() }} unread</span>
+                }
               </a>
             </li>
           }
@@ -121,7 +179,7 @@
       }
 
       @if (isAdmin()) {
-        <h2 class="app-nav__heading" id="nav-admin-heading">Administration</h2>
+        <h2 class="app-nav__heading app-nav__heading--admin" id="nav-admin-heading">Admin dojo</h2>
         <ul class="app-nav__list" aria-labelledby="nav-admin-heading">
           @for (item of adminNav; track item.route) {
             <li>
@@ -133,7 +191,8 @@
                 [attr.data-testid]="item.testId"
                 (click)="onNavigate()"
               >
-                {{ item.label }}
+                <dd-icon [name]="item.icon" [size]="19" />
+                <span>{{ item.label }}</span>
               </a>
             </li>
           }
@@ -149,3 +208,72 @@
     <app-footer />
   </mat-sidenav-content>
 </mat-sidenav-container>
+
+<!-- Touch-first bottom navigation for phones; hidden from the medium breakpoint up. -->
+<nav class="app-bottom-nav" aria-label="Primary, compact">
+  @if (session()) {
+    <a
+      class="app-bottom-nav__item"
+      routerLink="/dashboard"
+      routerLinkActive="app-bottom-nav--active"
+    >
+      <dd-icon name="compass" [size]="22" />
+      <span>Home</span>
+    </a>
+    <a
+      class="app-bottom-nav__item"
+      routerLink="/my-learning"
+      routerLinkActive="app-bottom-nav--active"
+    >
+      <dd-icon name="graduation" [size]="22" />
+      <span>Learn</span>
+    </a>
+    <a
+      class="app-bottom-nav__item"
+      routerLink="/community"
+      routerLinkActive="app-bottom-nav--active"
+    >
+      <dd-icon name="users" [size]="22" />
+      <span>Community</span>
+    </a>
+    <a
+      class="app-bottom-nav__item"
+      routerLink="/messages"
+      routerLinkActive="app-bottom-nav--active"
+    >
+      <span class="app-bottom-nav__icon-wrap">
+        <dd-icon name="message" [size]="22" />
+        @if (unread.conversations() > 0) {
+          <span class="app-badge" aria-hidden="true">{{ badge(unread.conversations()) }}</span>
+        }
+      </span>
+      <span>Messages</span>
+    </a>
+    <a class="app-bottom-nav__item" routerLink="/account" routerLinkActive="app-bottom-nav--active">
+      <dd-icon name="user" [size]="22" />
+      <span>Profile</span>
+    </a>
+  } @else {
+    <a
+      class="app-bottom-nav__item"
+      routerLink="/"
+      routerLinkActive="app-bottom-nav--active"
+      [routerLinkActiveOptions]="{ exact: true }"
+    >
+      <dd-icon name="home" [size]="22" />
+      <span>Home</span>
+    </a>
+    <a class="app-bottom-nav__item" routerLink="/courses" routerLinkActive="app-bottom-nav--active">
+      <dd-icon name="book" [size]="22" />
+      <span>Courses</span>
+    </a>
+    <a class="app-bottom-nav__item" routerLink="/pricing" routerLinkActive="app-bottom-nav--active">
+      <dd-icon name="tag" [size]="22" />
+      <span>Pricing</span>
+    </a>
+    <a class="app-bottom-nav__item" routerLink="/account" routerLinkActive="app-bottom-nav--active">
+      <dd-icon name="user" [size]="22" />
+      <span>Sign in</span>
+    </a>
+  }
+</nav>

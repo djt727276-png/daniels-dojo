@@ -1,75 +1,151 @@
 /* -------------------------------------------------------------------------
-   Daniel's Dojo — design tokens.
+   Daniel's Dojo — design tokens (v2 visual system).
 
    The single source of truth for colour, typography, spacing, radius,
    elevation, layout widths, and breakpoints. Components reference these
    variables; no component hard-codes a colour or size.
 
-   Light theme values live here now. The structure is deliberately split into
-   role tokens (surface / on-surface / outline …) rather than raw palette
-   names, so a dark theme can be added later by re-declaring the same roles
-   under a `[data-theme='dark']` selector without touching any component.
+   The identity is a digital dojo: ink/navy/slate surfaces, an indigo primary
+   that carries interaction and learning energy, energy-blue for informative
+   accents, and mastery gold reserved exclusively for achievement, completion,
+   and privileged emphasis so it keeps its meaning.
+
+   Dark is the signature experience and lives on :root. The light theme
+   re-declares the same roles from the same hue family — never a plain
+   inversion — under [data-theme='light'] and the OS light preference.
    ------------------------------------------------------------------------- */
 
-// Breakpoints. Exposed as Sass values because media queries cannot read
-// custom properties.
-$breakpoint-sm: 37.5rem; // 600px  — small tablet / large phone
-$breakpoint-md: 56.25rem; // 900px  — tablet, sidenav becomes permanent
-$breakpoint-lg: 75rem; // 1200px — wide desktop
+// Breakpoints live in _breakpoints.scss (Sass-only, no CSS output) so
+// component stylesheets can import them without duplicating this file's
+// emitted CSS. Re-exported here for the global stylesheet's convenience.
+@forward 'breakpoints';
+@use 'breakpoints' as *;
 
-// Narrowest layout the product must remain usable at.
-$min-supported-width: 20rem; // 320px
+/* --- Dark roles: the signature dojo-at-night face. ----------------------- */
+@mixin dd-dark-roles {
+  /* Brand palette — approved v2 values. */
+  --dd-ink: #090d18;
+  --dd-navy: #101827;
+  --dd-slate: #182235;
+  --dd-gold: #e9b949;
+
+  --dd-primary: #5b5ff5;
+  --dd-primary-hover: #6e72f7;
+  --dd-primary-container: #232a63;
+  --dd-on-primary: #ffffff;
+  --dd-on-primary-container: #dfe3ff;
+
+  /* Energy blue — informative/secondary learning accents and links. */
+  --dd-tertiary: #6ea8ff;
+  --dd-tertiary-container: #16294d;
+  --dd-on-tertiary: #061126;
+  --dd-on-tertiary-container: #d6e5ff;
+
+  /* Mastery gold — achievement only. Never a default surface accent. */
+  --dd-accent: #e9b949;
+  --dd-accent-container: #3d2f08;
+  --dd-on-accent: #241b02;
+  --dd-on-accent-container: #ffe9b0;
+
+  /* Neutral surfaces — ink base, navy cards, slate raised. */
+  --dd-background: #090d18;
+  --dd-surface: #101827;
+  --dd-surface-variant: #182235;
+  --dd-surface-raised: #1c2740;
+  --dd-on-surface: #f7f8fc;
+  --dd-on-surface-variant: #a6aec6;
+  --dd-outline: #2a3350;
+  --dd-outline-strong: #3d4870;
+
+  /* Semantic states — operational meaning only, paired with containers so
+     status is never carried by colour alone. */
+  --dd-success: #4ade80;
+  --dd-success-container: #12331f;
+  --dd-warning: #fbbf24;
+  --dd-warning-container: #3b2c05;
+  --dd-danger: #f87171;
+  --dd-danger-container: #431210;
+  --dd-info: #6ea8ff;
+  --dd-info-container: #16294d;
+
+  /* Depth on ink barely reads as shadow; it reads as raised surface plus a
+     faint indigo ambient edge, per the design-system board. */
+  --dd-elevation-1: 0 1px 2px rgb(0 0 0 / 45%);
+  --dd-elevation-2: 0 4px 14px rgb(0 0 0 / 45%), 0 0 18px rgb(91 95 245 / 5%);
+  --dd-elevation-3: 0 12px 32px rgb(0 0 0 / 55%), 0 0 28px rgb(91 95 245 / 8%);
+
+  --dd-scrim: rgb(4 6 12 / 60%);
+  --dd-glass: rgb(16 24 39 / 78%);
+}
+
+/* --- Light roles: the same hue family in daylight. ----------------------- */
+@mixin dd-light-roles {
+  --dd-ink: #090d18;
+  --dd-navy: #101827;
+  --dd-slate: #182235;
+  --dd-gold: #9c6f0a;
+
+  --dd-primary: #4348e0;
+  --dd-primary-hover: #3338c4;
+  --dd-primary-container: #e2e4ff;
+  --dd-on-primary: #ffffff;
+  --dd-on-primary-container: #171b66;
+
+  --dd-tertiary: #1d5fd6;
+  --dd-tertiary-container: #dbe7ff;
+  --dd-on-tertiary: #ffffff;
+  --dd-on-tertiary-container: #0d2a5e;
+
+  --dd-accent: #9c6f0a;
+  --dd-accent-container: #f9ecc8;
+  --dd-on-accent: #ffffff;
+  --dd-on-accent-container: #3a2a00;
+
+  --dd-background: #f7f8fc;
+  --dd-surface: #ffffff;
+  --dd-surface-variant: #eef0f8;
+  --dd-surface-raised: #ffffff;
+  --dd-on-surface: #131826;
+  --dd-on-surface-variant: #4c556e;
+  --dd-outline: #d4d9e8;
+  --dd-outline-strong: #a3abc4;
+
+  --dd-success: #157f3d;
+  --dd-success-container: #dcf5e5;
+  --dd-warning: #935604;
+  --dd-warning-container: #fdefcd;
+  --dd-danger: #c93a31;
+  --dd-danger-container: #fce6e4;
+  --dd-info: #1d5fd6;
+  --dd-info-container: #dbe7ff;
+
+  --dd-elevation-1: 0 1px 2px rgb(19 24 38 / 8%);
+  --dd-elevation-2: 0 3px 10px rgb(19 24 38 / 10%);
+  --dd-elevation-3: 0 10px 28px rgb(19 24 38 / 14%);
+
+  --dd-scrim: rgb(19 24 38 / 40%);
+  --dd-glass: rgb(255 255 255 / 82%);
+}
 
 :root {
-  /* --- Brand palette ------------------------------------------------------
-     Deep navy/indigo primary, restrained violet tertiary, warm amber reserved
-     exclusively for achievement/progress so it keeps its meaning. */
-  --dd-primary: #3445c4;
-  --dd-primary-hover: #2938a8;
-  --dd-primary-container: #dfe3fc;
-  --dd-on-primary: #ffffff;
-  --dd-on-primary-container: #111a52;
-
-  --dd-tertiary: #5b4b8a;
-  --dd-tertiary-container: #e8e2f5;
-  --dd-on-tertiary: #ffffff;
-  --dd-on-tertiary-container: #241c3d;
-
-  --dd-accent: #9c6b00;
-  --dd-accent-container: #f9e9c6;
-  --dd-on-accent: #ffffff;
-  --dd-on-accent-container: #3a2800;
-
-  /* --- Neutral surfaces --------------------------------------------------- */
-  --dd-background: #f6f7fb;
-  --dd-surface: #ffffff;
-  --dd-surface-variant: #eef0f6;
-  --dd-surface-raised: #ffffff;
-  --dd-on-surface: #1a1d26;
-  --dd-on-surface-variant: #4a5060;
-  --dd-outline: #c8cdda;
-  --dd-outline-strong: #9aa2b5;
-
-  /* --- Semantic states ----------------------------------------------------
-     Each state pairs a foreground with a container so status is never carried
-     by colour alone — components also render an icon or text label. */
-  --dd-success: #17663a;
-  --dd-success-container: #dcf1e5;
-  --dd-warning: #8a5300;
-  --dd-warning-container: #fdeccd;
-  --dd-danger: #a1231b;
-  --dd-danger-container: #fbe4e2;
-  --dd-info: #125a72;
-  --dd-info-container: #d9eef6;
+  /* Dark is the signature default; explicit or OS light overrides below. */
+  @include dd-dark-roles;
 
   /* --- Typography ---------------------------------------------------------
-     System font stack: no web font is downloaded, so text never depends on a
-     network request. */
+     Inter, self-hosted through the build (no runtime third-party host), with
+     the system stack as fallback so text never blocks on a font file. */
   --dd-font-sans:
-    system-ui, -apple-system, 'Segoe UI', roboto, helvetica, arial, sans-serif, 'Apple Color Emoji',
-    'Segoe UI Emoji';
+    'Inter', system-ui, -apple-system, 'Segoe UI', roboto, helvetica, arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji';
   --dd-font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', menlo, consolas, monospace;
 
+  /* Scale from the design-system board: display 56/64, h1 40/48, h2 28/36,
+     title 20/28, body 16/24, label + caption 12/16. Sizes step down on small
+     viewports via the fluid clamp on the display/h1 roles. */
+  --dd-text-display: clamp(2.25rem, 1.4rem + 3.2vw, 3.5rem);
+  --dd-text-h1: clamp(1.9rem, 1.35rem + 2vw, 2.5rem);
+  --dd-text-h2: 1.75rem;
+  --dd-text-title: 1.25rem;
   --dd-text-xs: 0.75rem;
   --dd-text-sm: 0.875rem;
   --dd-text-base: 1rem;
@@ -78,14 +154,18 @@ $min-supported-width: 20rem; // 320px
   --dd-text-2xl: 1.75rem;
   --dd-text-3xl: 2.25rem;
 
-  --dd-leading-tight: 1.25;
+  --dd-leading-tight: 1.2;
+  --dd-leading-snug: 1.35;
   --dd-leading-base: 1.55;
 
   --dd-weight-regular: 400;
   --dd-weight-medium: 500;
+  --dd-weight-semibold: 600;
   --dd-weight-bold: 700;
 
-  /* --- Spacing scale ------------------------------------------------------ */
+  --dd-tracking-label: 0.08em;
+
+  /* --- Spacing scale — 8px rhythm with 4px half-steps. -------------------- */
   --dd-space-1: 0.25rem;
   --dd-space-2: 0.5rem;
   --dd-space-3: 0.75rem;
@@ -95,36 +175,51 @@ $min-supported-width: 20rem; // 320px
   --dd-space-8: 3rem;
   --dd-space-10: 4rem;
 
-  /* --- Radius ------------------------------------------------------------- */
-  --dd-radius-sm: 6px;
-  --dd-radius-md: 10px;
+  /* --- Radius — 8px interactive elements, softer cards. ------------------- */
+  --dd-radius-sm: 8px;
+  --dd-radius-md: 12px;
   --dd-radius-lg: 16px;
   --dd-radius-pill: 999px;
 
-  /* --- Elevation ---------------------------------------------------------- */
   --dd-elevation-0: none;
-  --dd-elevation-1: 0 1px 2px rgb(26 29 38 / 8%);
-  --dd-elevation-2: 0 2px 8px rgb(26 29 38 / 10%);
-  --dd-elevation-3: 0 8px 24px rgb(26 29 38 / 12%);
 
   /* --- Layout ------------------------------------------------------------- */
-  --dd-content-max: 76rem;
+  --dd-content-max: 80rem;
   --dd-reading-max: 44rem;
-  --dd-sidenav-width: 16rem;
-  --dd-toolbar-height: 3.5rem;
+  --dd-sidenav-width: 16.5rem;
+  --dd-toolbar-height: 4rem;
+  --dd-bottom-nav-height: 4rem;
 
-  /* --- Motion -------------------------------------------------------------
-     Durations are tokenised so the reduced-motion rule below can zero them in
-     one place rather than per component. */
-  --dd-motion-fast: 120ms;
-  --dd-motion-base: 200ms;
-  --dd-motion-slow: 320ms;
+  /* --- Motion — durations from the approved motion spec. ------------------
+     Tokenised so the reduced-motion rule can zero them in one place. */
+  --dd-motion-hover: 140ms;
+  --dd-motion-enter: 180ms;
+  --dd-motion-drawer: 240ms;
+  --dd-motion-celebrate: 450ms;
+  --dd-motion-fast: 140ms;
+  --dd-motion-base: 180ms;
+  --dd-motion-slow: 240ms;
   --dd-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --dd-easing-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+:root[data-theme='light'] {
+  @include dd-light-roles;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    @include dd-light-roles;
+  }
 }
 
 /* Honour the operating-system reduced-motion preference everywhere. */
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --dd-motion-hover: 1ms;
+    --dd-motion-enter: 1ms;
+    --dd-motion-drawer: 1ms;
+    --dd-motion-celebrate: 1ms;
     --dd-motion-fast: 1ms;
     --dd-motion-base: 1ms;
     --dd-motion-slow: 1ms;
@@ -137,69 +232,5 @@ $min-supported-width: 20rem; // 320px
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
-  }
-}
-
-/* -------------------------------------------------------------------------
-   Dark theme — the technology-meets-dojo identity's night face.
-
-   The same role tokens, re-declared. Charcoal/ink surfaces, an electric
-   indigo primary that reads as light-on-dark, and the gold accent warmed so
-   achievement still glows. Components change nothing: they only ever read
-   roles.
-
-   Two selectors carry it: an explicit choice via [data-theme='dark'], and the
-   operating-system preference when the visitor has not chosen ('system' or no
-   attribute). [data-theme='light'] therefore always wins over the OS.
-   ------------------------------------------------------------------------- */
-
-@mixin dd-dark-roles {
-  --dd-primary: #93a4ff;
-  --dd-primary-hover: #aab7ff;
-  --dd-primary-container: #2a3480;
-  --dd-on-primary: #0d144d;
-  --dd-on-primary-container: #dfe3ff;
-
-  --dd-tertiary: #c5b4f2;
-  --dd-tertiary-container: #43356b;
-  --dd-on-tertiary: #2a1e4d;
-  --dd-on-tertiary-container: #e8e0fa;
-
-  --dd-accent: #eebd55;
-  --dd-accent-container: #4d3a08;
-  --dd-on-accent: #2d2100;
-  --dd-on-accent-container: #ffe9b8;
-
-  --dd-background: #0f1117;
-  --dd-surface: #161923;
-  --dd-surface-variant: #1f2330;
-  --dd-surface-raised: #1b1f2b;
-  --dd-on-surface: #e6e8f0;
-  --dd-on-surface-variant: #a9afc3;
-  --dd-outline: #333a4e;
-  --dd-outline-strong: #4d5570;
-
-  --dd-success: #74d69b;
-  --dd-success-container: #14331f;
-  --dd-warning: #ffc76e;
-  --dd-warning-container: #3d2c05;
-  --dd-danger: #ff9d95;
-  --dd-danger-container: #45100b;
-  --dd-info: #83cdec;
-  --dd-info-container: #0f2f3d;
-
-  /* Shadows barely read on ink; depth comes from raised surfaces instead. */
-  --dd-elevation-1: 0 1px 2px rgb(0 0 0 / 35%);
-  --dd-elevation-2: 0 2px 8px rgb(0 0 0 / 40%);
-  --dd-elevation-3: 0 8px 24px rgb(0 0 0 / 50%);
-}
-
-:root[data-theme='dark'] {
-  @include dd-dark-roles;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    @include dd-dark-roles;
   }
 }
