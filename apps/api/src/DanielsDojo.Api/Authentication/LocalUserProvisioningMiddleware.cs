@@ -64,6 +64,19 @@ internal sealed partial class LocalUserProvisioningMiddleware(RequestDelegate ne
         {
             string reason = result.Failure.ToString();
             LogDenied(logger, reason);
+
+            // A missing email claim means the token is valid but carries nothing to
+            // contact the customer with — almost always because the API registration was
+            // never asked to emit the claim, not because the customer did anything wrong.
+            // Logging the claim *names* present (never their values, which are personal
+            // data) turns a silent 403 into a one-look diagnosis.
+            if (result.Failure == UserProvisioningFailure.MissingEmailClaim)
+            {
+                LogClaimNames(
+                    logger,
+                    string.Join(',', context.User.Claims.Select(claim => claim.Type).Distinct()));
+            }
+
             await WriteForbiddenAsync(context).ConfigureAwait(false);
             return;
         }
@@ -102,4 +115,12 @@ internal sealed partial class LocalUserProvisioningMiddleware(RequestDelegate ne
         Level = LogLevel.Information,
         Message = "Request denied during local user resolution: {Reason}.")]
     private static partial void LogDenied(ILogger logger, string reason);
+
+    [LoggerMessage(
+        EventId = 3101,
+        Level = LogLevel.Warning,
+        Message = "The validated token carried no email claim. Claim names present: {ClaimNames}. "
+            + "Configure the API app registration to emit the claim named by "
+            + "Authentication:EntraExternalId:EmailClaimName. Claim values are never logged.")]
+    private static partial void LogClaimNames(ILogger logger, string claimNames);
 }
