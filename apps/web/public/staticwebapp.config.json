@@ -2,7 +2,9 @@
   "$schema": "https://json.schemastore.org/staticwebapp.config.json",
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["*.{css,js,ico,png,jpg,jpeg,svg,webp,txt,xml,json,map,woff,woff2}"]
+    "exclude": [
+      "*.{css,js,ico,png,jpg,jpeg,svg,webp,txt,xml,json,map,woff,woff2}"
+    ]
   },
   "responseOverrides": {
     "404": {
@@ -14,7 +16,6 @@
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-    "//csp": "Report-only until the inline-event-handler violations observed in production are attributed. Enforcing a policy whose effects are not understood risks breaking interactions silently; the directive list below is already the intended final policy, including the API over https and wss.",
     "Content-Security-Policy-Report-Only": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob: https://stream.mux.com; connect-src 'self' https://api.daniels-dojo.com wss://api.daniels-dojo.com https://daniels-dojo-prod-api.livelyrock-d07adbec.centralus.azurecontainerapps.io wss://daniels-dojo-prod-api.livelyrock-d07adbec.centralus.azurecontainerapps.io https://danielsdojodev.ciamlogin.com https://login.microsoftonline.com https://stream.mux.com; frame-src https://danielsdojodev.ciamlogin.com https://login.microsoftonline.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com; object-src 'none'"
   }
 }
