@@ -128,6 +128,18 @@ jobs:
           echo "Migrations failed after 4 attempts."
           exit 1
 
+      # Reference data — roles, catalog shells — is idempotent (AddIfAbsent throughout),
+      # so it runs on every deployment. A database with migrations but no roles refuses
+      # every sign-in with a foreign-key violation, which is exactly what happened once.
+      - name: Apply reference seed
+        run: |
+          VAULT=$(az keyvault list -g "$RESOURCE_GROUP" --query "[0].name" -o tsv)
+          CONNECTION=$(az keyvault secret show --vault-name "$VAULT" \
+            --name sql-connection-string --query value -o tsv)
+          export ConnectionStrings__DanielsDojoDatabase="$CONNECTION"
+          dotnet run --project apps/api/src/DanielsDojo.Api -c Release -- \
+            database seed --profile reference
+
   deploy:
     name: Promote the verified image
     needs: migrate

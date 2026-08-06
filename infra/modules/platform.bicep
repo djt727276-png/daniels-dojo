@@ -50,6 +50,9 @@ param stripeConfigured bool = false
 @description('Whether the video provider webhook secret exists in the vault. Same fail-closed rule as Stripe: when false the video provider runs Disabled and the webhook-secret reference is omitted, so the app can be provisioned — and its real hostname obtained for creating the provider webhook — before the secret exists.')
 param videoWebhookConfigured bool = true
 
+@description('Minimum API replicas. Development scales to zero to cost nothing while idle; production keeps one replica warm because a customer arriving after a quiet spell must not watch a cold start fail their first request.')
+param apiMinReplicas int = 0
+
 @description('Media storage account name for this environment. Public configuration, not a secret; the API reaches it with its managed identity.')
 param mediaStorageAccountName string
 
@@ -496,7 +499,7 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = if (deployApiApp) {
         }
       ]
       scale: {
-        minReplicas: 0
+        minReplicas: apiMinReplicas
         maxReplicas: 2
       }
     }

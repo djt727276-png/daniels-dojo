@@ -65,6 +65,9 @@ module platform '../../modules/platform.bicep' = {
     deployContainerEnvironment: deployContainerEnvironment
     stripeConfigured: stripeConfigured
     videoWebhookConfigured: videoWebhookConfigured
+
+    // A paying customer's first request must not be a cold start.
+    apiMinReplicas: 1
     monthlyBudgetUsd: 25
     budgetAlertEmail: budgetAlertEmail
   }
