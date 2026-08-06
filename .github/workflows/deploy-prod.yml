@@ -172,3 +172,40 @@ jobs:
           echo "- Image: ${{ inputs.imageDigest }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Rollback: az containerapp revision list, then activate the prior revision." \
             >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-web:
+    name: Deploy the production web app
+    needs: deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_PROD }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The production-prod configuration swaps in environment.prod.ts: the production
+      # API origin and the production Entra SPA/API registrations, nothing shared with
+      # the development deployment.
+      - name: Build the production bundle
+        working-directory: apps/web
+        run: |
+          npm ci
+          npx ng build --configuration production-prod
+
+      - name: Deploy the Static Web App
+        run: |
+          SWA=$(az staticwebapp list -g "$RESOURCE_GROUP" --query "[0].name" -o tsv)
+          TOKEN=$(az staticwebapp secrets list -n "$SWA" -g "$RESOURCE_GROUP" \
+            --query properties.apiKey -o tsv)
+          npx --yes @azure/static-web-apps-cli deploy \
+            ./apps/web/dist/daniels-dojo-web/browser \
+            --deployment-token "$TOKEN" --env production
