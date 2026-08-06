@@ -8,9 +8,10 @@ import { AuthConfig } from '../app/core/configuration/auth-config';
  * and its own origins. Every value is a public identifier or URL — the SPA is a public
  * client and holds no secret in any environment.
  *
- * At the custom-domain cutover these URLs change to https://daniels-dojo.com and
- * https://api.daniels-dojo.com in one commit, and the Entra SPA registration gains the
- * matching redirect URIs first.
+ * The canonical origin is the apex. www redirects to it at the edge, so the apex is the
+ * only origin a browser actually lands on and therefore the only redirect URI the flow
+ * needs — the Entra registration also accepts the www form so a redirect that arrives
+ * mid-flow cannot strand anyone.
  */
 export const environment: {
   readonly production: boolean;
@@ -19,8 +20,7 @@ export const environment: {
 } = {
   production: true,
 
-  apiBaseUrl:
-    'https://daniels-dojo-prod-api.livelyrock-d07adbec.centralus.azurecontainerapps.io/api',
+  apiBaseUrl: 'https://api.daniels-dojo.com/api',
 
   auth: {
     mode: 'entra',
@@ -31,10 +31,9 @@ export const environment: {
     knownAuthorities: ['danielsdojodev.ciamlogin.com'],
     apiScope: 'api://d26462c9-130e-4136-8e7d-f2ea4002c564/access_as_user',
 
-    redirectUri: 'https://brave-flower-0f473690f.7.azurestaticapps.net/',
-    postLogoutRedirectUri: 'https://brave-flower-0f473690f.7.azurestaticapps.net/',
+    redirectUri: 'https://daniels-dojo.com/',
+    postLogoutRedirectUri: 'https://daniels-dojo.com/',
 
-    apiBaseUrl:
-      'https://daniels-dojo-prod-api.livelyrock-d07adbec.centralus.azurecontainerapps.io/api',
+    apiBaseUrl: 'https://api.daniels-dojo.com/api',
   },
 };
