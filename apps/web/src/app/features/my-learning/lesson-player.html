@@ -1,0 +1,271 @@
+@switch (state().kind) {
+  @case ('loading') {
+    <app-loading-state message="Opening the lesson…" />
+  }
+  @case ('error') {
+    <app-error-state [message]="message()" (retry)="load()" />
+  }
+  @default {
+    @if (lesson(); as detail) {
+      <div class="study" [class.study--focus]="focusMode()">
+        <!-- Curriculum rail: sections, lesson states, and the viewer's own progress. -->
+        @if (curriculum(); as outline) {
+          <aside
+            class="study__rail"
+            [class.study__rail--open]="drawerOpen()"
+            aria-label="Course curriculum"
+          >
+            <div class="study__rail-head">
+              <a class="study__course" [routerLink]="['/courses', outline.slug]">
+                <span class="dd-label">Course</span>
+                <span class="study__course-title">{{ outline.title }}</span>
+              </a>
+              <button
+                matIconButton
+                type="button"
+                class="study__rail-close"
+                aria-label="Close curriculum"
+                (click)="closeDrawer()"
+              >
+                <dd-icon name="close" [size]="20" />
+              </button>
+            </div>
+
+            <div class="study__progress">
+              <mat-progress-bar
+                mode="determinate"
+                [value]="
+                  outline.totalLessons === 0
+                    ? 0
+                    : (outline.completedLessons / outline.totalLessons) * 100
+                "
+                aria-label="Course progress"
+              />
+              <span class="dd-caption">
+                {{ outline.completedLessons }} / {{ outline.totalLessons }} complete
+              </span>
+            </div>
+
+            <nav class="study__sections" aria-label="Lessons">
+              @for (section of outline.sections; track section.id) {
+                <section class="study__section">
+                  <h2 class="study__section-title">
+                    <span class="dd-label">{{ section.title }}</span>
+                  </h2>
+                  <ul class="study__lessons">
+                    @for (item of section.lessons; track item.id) {
+                      <li>
+                        <a
+                          class="study__lesson"
+                          [class.study__lesson--current]="item.id === detail.id"
+                          [class.study__lesson--done]="item.completedAtUtc !== null"
+                          [routerLink]="['/learn/lessons', item.id]"
+                          [attr.aria-current]="item.id === detail.id ? 'page' : null"
+                          (click)="closeDrawer()"
+                        >
+                          <span class="study__lesson-state" aria-hidden="true">
+                            @if (item.completedAtUtc) {
+                              <dd-icon name="check-circle" [size]="16" />
+                            } @else if (item.lessonType === 'Video') {
+                              <dd-icon name="play" [size]="16" />
+                            } @else {
+                              <dd-icon name="file" [size]="16" />
+                            }
+                          </span>
+                          <span class="study__lesson-title">{{ item.title }}</span>
+                          @if (item.estimatedDurationSeconds; as secs) {
+                            <span class="dd-caption">{{ minutes(secs) }}</span>
+                          }
+                          @if (item.completedAtUtc) {
+                            <span class="dd-visually-hidden">Completed</span>
+                          }
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
+            </nav>
+          </aside>
+
+          @if (drawerOpen()) {
+            <button
+              type="button"
+              class="study__scrim"
+              aria-label="Close curriculum"
+              (click)="closeDrawer()"
+            ></button>
+          }
+        }
+
+        <div class="study__main">
+          <div class="study__toolbar">
+            @if (curriculum()) {
+              <button
+                matButton
+                type="button"
+                class="study__drawer-toggle"
+                (click)="toggleDrawer()"
+                [attr.aria-expanded]="drawerOpen()"
+              >
+                <span class="study__btn-line">
+                  <dd-icon name="menu" [size]="18" />
+                  Curriculum
+                </span>
+              </button>
+            }
+            <a matButton [routerLink]="['/courses', detail.courseSlug]">Course overview</a>
+            <span class="study__toolbar-spacer"></span>
+            <button
+              matButton="outlined"
+              type="button"
+              (click)="toggleFocus()"
+              [matTooltip]="focusMode() ? 'Show the curriculum' : 'Hide everything but the lesson'"
+            >
+              <span class="study__btn-line">
+                <dd-icon name="eye" [size]="18" />
+                {{ focusMode() ? 'Exit focus' : 'Focus mode' }}
+              </span>
+            </button>
+          </div>
+
+          @if (detail.lessonType === 'Video') {
+            <div class="study__stage">
+              @if (playback(); as grant) {
+                @if (realStream()) {
+                  <video
+                    #lessonVideo
+                    class="study__video"
+                    controls
+                    playsinline
+                    preload="metadata"
+                    [style.aspect-ratio]="grant.aspectRatio ?? '16 / 9'"
+                    data-testid="player-frame"
+                  ></video>
+                } @else {
+                  <!-- The deterministic provider proves the authorisation path
+                       without a stream that could exist. -->
+                  <div
+                    class="study__frame"
+                    [style.aspect-ratio]="grant.aspectRatio ?? '16 / 9'"
+                    data-testid="player-frame"
+                  >
+                    <dd-icon name="check-circle" [size]="32" />
+                    <p class="study__frame-note">
+                      Playback authorised for <code>{{ grant.playbackId }}</code
+                      >. This environment uses the deterministic video provider, so no stream plays;
+                      the grant expires {{ grant.expiresAtUtc }}.
+                    </p>
+                  </div>
+                }
+              } @else if (detail.isPlayable) {
+                <div class="study__frame study__frame--invite" [style.aspect-ratio]="'16 / 9'">
+                  <button
+                    matButton="filled"
+                    type="button"
+                    class="study__play"
+                    (click)="play()"
+                    data-testid="play-lesson"
+                  >
+                    <span class="study__btn-line">
+                      <dd-icon name="play" [size]="20" />
+                      Play lesson
+                    </span>
+                  </button>
+                </div>
+              } @else {
+                <div class="study__frame" [style.aspect-ratio]="'16 / 9'">
+                  <dd-icon name="clock" [size]="28" />
+                  <p class="study__frame-note">
+                    This lesson's video is still being prepared. Check back shortly.
+                  </p>
+                </div>
+              }
+
+              @if (playbackFailure(); as failure) {
+                <p class="study__failure" role="alert">{{ failure }}</p>
+              }
+            </div>
+          }
+
+          <header class="study__head">
+            <h1 class="dd-h2">{{ detail.title }}</h1>
+            <p class="dd-caption">
+              {{ detail.lessonType }}
+              @if (detail.completedAtUtc) {
+                · Completed
+              }
+            </p>
+          </header>
+
+          @if (detail.bodyMarkdown; as body) {
+            <section class="dd-card study__body-card">
+              <pre class="study__body">{{ body }}</pre>
+            </section>
+          }
+
+          @if (detail.resources.length > 0) {
+            <section class="dd-card" aria-labelledby="materials-heading">
+              <h2 id="materials-heading" class="dd-title study__materials-title">
+                Lesson materials
+              </h2>
+              <ul class="study__resources">
+                @for (resource of detail.resources; track resource.id) {
+                  <li class="study__resource">
+                    <span class="dd-icon-chip dd-icon-chip--blue">
+                      <dd-icon name="file" [size]="18" />
+                    </span>
+                    <span class="study__resource-name">{{ resource.displayName }}</span>
+                    <span class="dd-caption">{{ resource.mediaType }}</span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <div class="study__nav">
+            @if (detail.previousLessonId; as previous) {
+              <a matButton [routerLink]="['/learn/lessons', previous]">
+                <span class="study__btn-line">
+                  <dd-icon name="arrow-left" [size]="18" />
+                  Previous
+                </span>
+              </a>
+            } @else {
+              <span></span>
+            }
+
+            @if (detail.completedAtUtc) {
+              <span class="study__done dd-celebrate" role="status">
+                <dd-icon name="check-circle" [size]="20" />
+                Completed
+              </span>
+            } @else {
+              <button
+                matButton="filled"
+                type="button"
+                [disabled]="completing()"
+                (click)="complete()"
+                data-testid="mark-complete"
+              >
+                <span class="study__btn-line">
+                  <dd-icon name="check" [size]="18" />
+                  Mark complete
+                </span>
+              </button>
+            }
+
+            @if (detail.nextLessonId; as next) {
+              <a matButton="outlined" [routerLink]="['/learn/lessons', next]">
+                <span class="study__btn-line">
+                  Next lesson
+                  <dd-icon name="arrow-right" [size]="18" />
+                </span>
+              </a>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+}

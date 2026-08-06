@@ -1,11 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { RouterLink } from '@angular/router';
 
 import { CatalogApi } from '../../core/catalog/catalog-api';
 import { CourseCard, formatLevel, formatPrice } from '../../core/catalog/catalog.model';
+import { DdIcon } from '../../shared/ui/icon/dd-icon';
 import { SystemStatusCard } from '../system-status/system-status-card';
 
 /**
@@ -17,7 +16,7 @@ import { SystemStatusCard } from '../system-status/system-status-card';
  */
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, MatCardModule, MatButtonModule, MatChipsModule, SystemStatusCard],
+  imports: [RouterLink, MatButtonModule, DdIcon, SystemStatusCard],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })

@@ -1,0 +1,311 @@
+/* The study layout: curriculum rail beside the stage on wide screens, an
+   overlay drawer below the medium breakpoint, and focus mode hiding the rail
+   entirely. Calm surfaces around the video — nothing competes with it. */
+
+@use '../../../styles/breakpoints' as bp;
+
+.study {
+  display: grid;
+  grid-template-columns: 19rem minmax(0, 1fr);
+  gap: var(--dd-space-5);
+  max-width: var(--dd-content-max);
+  margin: 0 auto;
+  padding: var(--dd-space-5) var(--dd-space-4) var(--dd-space-10);
+}
+
+.study--focus {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.study--focus .study__rail {
+  display: none;
+}
+
+/* --- Curriculum rail ------------------------------------------------------ */
+
+.study__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-4);
+  align-self: start;
+  position: sticky;
+  top: calc(var(--dd-toolbar-height) + var(--dd-space-4));
+  max-height: calc(100vh - var(--dd-toolbar-height) - var(--dd-space-6));
+  overflow-y: auto;
+  background: var(--dd-surface);
+  border: 1px solid var(--dd-outline);
+  border-radius: var(--dd-radius-lg);
+  padding: var(--dd-space-4);
+}
+
+.study__rail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--dd-space-2);
+}
+
+.study__course {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-1);
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.study__course-title {
+  font-weight: var(--dd-weight-semibold);
+  line-height: var(--dd-leading-snug);
+}
+
+.study__rail-close {
+  display: none;
+}
+
+.study__progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-1);
+}
+
+.study__sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-4);
+}
+
+.study__section-title {
+  margin-bottom: var(--dd-space-2);
+}
+
+.study__lessons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.study__lesson {
+  display: flex;
+  align-items: center;
+  gap: var(--dd-space-2);
+  padding: var(--dd-space-2) var(--dd-space-2);
+  border-radius: var(--dd-radius-sm);
+  color: var(--dd-on-surface-variant);
+  text-decoration: none;
+  font-size: var(--dd-text-sm);
+  min-height: 2.5rem;
+  transition:
+    background var(--dd-motion-hover) var(--dd-easing-standard),
+    color var(--dd-motion-hover) var(--dd-easing-standard);
+}
+
+.study__lesson:hover {
+  background: var(--dd-surface-variant);
+  color: var(--dd-on-surface);
+}
+
+.study__lesson--current {
+  background: var(--dd-primary-container);
+  color: var(--dd-on-primary-container);
+  font-weight: var(--dd-weight-medium);
+}
+
+.study__lesson--done .study__lesson-state {
+  color: var(--dd-success);
+}
+
+.study__lesson-state {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.study__lesson-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --- Main column ----------------------------------------------------------- */
+
+.study__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-4);
+  min-width: 0;
+}
+
+.study__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dd-space-2);
+}
+
+.study__toolbar-spacer {
+  flex: 1;
+}
+
+.study__drawer-toggle {
+  display: none;
+}
+
+.study__btn-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dd-space-2);
+}
+
+/* --- Stage ----------------------------------------------------------------- */
+
+.study__video {
+  display: block;
+  width: 100%;
+  background: #000;
+  border-radius: var(--dd-radius-md);
+}
+
+.study__frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dd-space-3);
+  width: 100%;
+  color: var(--dd-on-surface-variant);
+  background:
+    radial-gradient(
+      100% 140% at 80% 10%,
+      color-mix(in srgb, var(--dd-primary) 18%, transparent),
+      transparent 60%
+    ),
+    var(--dd-surface);
+  border: 1px solid var(--dd-outline);
+  border-radius: var(--dd-radius-md);
+}
+
+.study__frame-note {
+  max-width: 36rem;
+  padding-inline: var(--dd-space-4);
+  text-align: center;
+}
+
+.study__play {
+  min-height: 3.25rem;
+  padding-inline: var(--dd-space-6);
+  font-size: var(--dd-text-base);
+}
+
+.study__failure {
+  margin-top: var(--dd-space-2);
+  color: var(--dd-danger);
+}
+
+.study__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-1);
+}
+
+.study__body-card {
+  overflow-x: auto;
+}
+
+.study__body {
+  font-family: var(--dd-font-sans);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+  line-height: var(--dd-leading-base);
+}
+
+.study__materials-title {
+  margin-bottom: var(--dd-space-3);
+}
+
+.study__resources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-3);
+}
+
+.study__resource {
+  display: flex;
+  align-items: center;
+  gap: var(--dd-space-3);
+}
+
+.study__resource-name {
+  font-weight: var(--dd-weight-medium);
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.study__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dd-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.study__done {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dd-space-2);
+  font-weight: var(--dd-weight-semibold);
+  color: var(--dd-success);
+}
+
+.study__scrim {
+  display: none;
+}
+
+/* --- Small screens: the rail becomes an overlay drawer. -------------------- */
+
+@media (max-width: bp.$breakpoint-md) {
+  .study {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .study__drawer-toggle {
+    display: inline-flex;
+  }
+
+  .study__rail {
+    position: fixed;
+    inset: var(--dd-toolbar-height) auto 0 0;
+    z-index: 210;
+    width: min(20rem, 85vw);
+    max-height: none;
+    border-radius: 0;
+    border-block: none;
+    border-left: none;
+    transform: translateX(-100%);
+    transition: transform var(--dd-motion-drawer) var(--dd-easing-standard);
+  }
+
+  .study__rail--open {
+    transform: none;
+  }
+
+  .study__rail-close {
+    display: inline-flex;
+  }
+
+  .study__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    border: 0;
+    background: var(--dd-scrim);
+  }
+}

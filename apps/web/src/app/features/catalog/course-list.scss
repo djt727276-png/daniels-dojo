@@ -24,6 +24,16 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  transition:
+    border-color var(--dd-motion-hover) var(--dd-easing-standard),
+    box-shadow var(--dd-motion-hover) var(--dd-easing-standard),
+    transform var(--dd-motion-hover) var(--dd-easing-standard);
+}
+
+.course:hover {
+  border-color: var(--dd-outline-strong);
+  box-shadow: var(--dd-elevation-2);
+  transform: translateY(-2px);
 }
 
 .course__body {
@@ -78,17 +88,33 @@
   }
 }
 
+/* Atmospheric tile standing in until real cover art exists in the catalog:
+   an indigo-to-navy field with a faint glow behind the course initial. */
 .course__thumb {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 7rem;
-  background: linear-gradient(135deg, var(--dd-surface-variant), var(--dd-info-container));
+  height: 7.5rem;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      120% 140% at 85% 10%,
+      color-mix(in srgb, var(--dd-primary) 38%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      90% 120% at 15% 90%,
+      color-mix(in srgb, var(--dd-tertiary) 22%, transparent),
+      transparent 65%
+    ),
+    var(--dd-surface-variant);
   border-bottom: 1px solid var(--dd-outline);
 }
 
 .course__initial {
-  font-size: var(--dd-text-2xl);
+  font-size: var(--dd-text-3xl);
   font-weight: var(--dd-weight-bold);
-  color: var(--dd-on-surface-variant);
+  color: color-mix(in srgb, var(--dd-on-surface) 85%, transparent);
+  text-shadow: 0 2px 18px color-mix(in srgb, var(--dd-primary) 55%, transparent);
 }

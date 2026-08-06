@@ -41,9 +41,10 @@ import { Component, input } from '@angular/core';
     }
 
     .page-header__title {
-      font-size: var(--dd-text-2xl);
+      font-size: var(--dd-text-h1);
       line-height: var(--dd-leading-tight);
       font-weight: var(--dd-weight-bold);
+      letter-spacing: -0.015em;
       overflow-wrap: anywhere;
     }
 

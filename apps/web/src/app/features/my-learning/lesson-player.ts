@@ -1,15 +1,26 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injectable,
+  OnDestroy,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import type Hls from 'hls.js';
 import { Observable } from 'rxjs';
 
 import { LessonPlaybackGrant } from '../../core/admin/admin-media-api';
 import { toApiFailure } from '../../core/api/problem-details';
 import { API_BASE_PATH } from '../../core/configuration/app-config';
-import { LearningApi, LessonDetail } from '../../core/learning/learning-api';
-import { PageHeader } from '../../shared/ui/page-header/page-header';
+import { CourseCurriculum, LearningApi, LessonDetail } from '../../core/learning/learning-api';
+import { DdIcon } from '../../shared/ui/icon/dd-icon';
 import { ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 
 type PlayerState =
@@ -31,156 +42,33 @@ class LessonPlaybackApi {
 }
 
 /**
- * One lesson, opened for study.
+ * One lesson, opened for study: the immersive player with the course
+ * curriculum alongside.
  *
- * An article renders its body; a video lesson requests a short-lived playback authorisation
- * when the learner presses play. Progress is reported to the server, which owns the rules:
- * positions only move forward and completion never un-happens, so nothing here needs to
- * defend against its own stale state.
+ * A video lesson requests a short-lived playback authorisation when the
+ * learner presses play, then streams the signed Mux HLS rendition through the
+ * native video element (Safari) or hls.js (everything else) — loaded on
+ * demand so the player chunk stays light. A deterministic grant (the
+ * non-production provider) renders the authorisation proof panel instead of a
+ * stream that cannot exist.
+ *
+ * Progress is reported to the server, which owns the rules: positions only
+ * move forward and completion never un-happens, so nothing here defends
+ * against its own stale state. Focus mode simply hides the curriculum rail.
  */
 @Component({
   selector: 'app-lesson-player',
-  imports: [RouterLink, MatCardModule, MatButtonModule, PageHeader, LoadingState, ErrorState],
-  template: `
-    @switch (state().kind) {
-      @case ('loading') {
-        <app-loading-state message="Opening the lesson…" />
-      }
-      @case ('error') {
-        <app-error-state [message]="message()" (retry)="load()" />
-      }
-      @default {
-        @if (lesson(); as detail) {
-          <div class="dd-page dd-stack">
-            <app-page-header [title]="detail.title" [description]="'Lesson'">
-              <a matButton [routerLink]="['/courses', detail.courseSlug]">Course outline</a>
-            </app-page-header>
-
-            @if (detail.lessonType === 'Video') {
-              <mat-card appearance="outlined">
-                <mat-card-content>
-                  @if (playback(); as grant) {
-                    <div
-                      class="player__frame"
-                      [style.aspect-ratio]="grant.aspectRatio ?? '16 / 9'"
-                      data-testid="player-frame"
-                    >
-                      <p class="player__placeholder">
-                        Playing <code>{{ grant.playbackId }}</code> — authorisation expires
-                        {{ grant.expiresAtUtc }}.
-                      </p>
-                    </div>
-                  } @else if (detail.isPlayable) {
-                    <div class="player__frame" [style.aspect-ratio]="'16 / 9'">
-                      <button matButton="filled" type="button" (click)="play()">
-                        ▶ Play lesson
-                      </button>
-                    </div>
-                  } @else {
-                    <p class="player__unready">
-                      This lesson's video is still being prepared. Check back shortly.
-                    </p>
-                  }
-
-                  @if (playbackFailure(); as failure) {
-                    <p class="player__unready" role="alert">{{ failure }}</p>
-                  }
-                </mat-card-content>
-              </mat-card>
-            }
-
-            @if (detail.bodyMarkdown; as body) {
-              <mat-card appearance="outlined">
-                <mat-card-content>
-                  <pre class="player__body">{{ body }}</pre>
-                </mat-card-content>
-              </mat-card>
-            }
-
-            @if (detail.resources.length > 0) {
-              <mat-card appearance="outlined">
-                <mat-card-header>
-                  <mat-card-title>Lesson materials</mat-card-title>
-                </mat-card-header>
-                <mat-card-content>
-                  <ul class="player__resources">
-                    @for (resource of detail.resources; track resource.id) {
-                      <li>{{ resource.displayName }} ({{ resource.mediaType }})</li>
-                    }
-                  </ul>
-                </mat-card-content>
-              </mat-card>
-            }
-
-            <div class="player__nav">
-              @if (detail.previousLessonId; as previous) {
-                <a matButton [routerLink]="['/learn/lessons', previous]">← Previous lesson</a>
-              } @else {
-                <span></span>
-              }
-
-              @if (detail.completedAtUtc) {
-                <span class="player__done" role="status">Completed ✓</span>
-              } @else {
-                <button
-                  matButton="filled"
-                  type="button"
-                  [disabled]="completing()"
-                  (click)="complete()"
-                >
-                  Mark as complete
-                </button>
-              }
-
-              @if (detail.nextLessonId; as next) {
-                <a matButton [routerLink]="['/learn/lessons', next]">Next lesson →</a>
-              }
-            </div>
-          </div>
-        }
-      }
-    }
-  `,
-  styles: `
-    .player__frame {
-      display: grid;
-      place-items: center;
-      width: 100%;
-      background: var(--dd-surface-variant);
-      border-radius: var(--dd-radius-md);
-    }
-
-    .player__placeholder,
-    .player__unready {
-      padding: var(--dd-space-4);
-      color: var(--dd-on-surface-variant);
-      text-align: center;
-    }
-
-    .player__body {
-      font-family: var(--dd-font-sans);
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    .player__resources {
-      margin: 0;
-      padding-left: var(--dd-space-5);
-    }
-
-    .player__nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--dd-space-3);
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .player__done {
-      font-weight: var(--dd-weight-medium);
-      color: var(--dd-success);
-    }
-  `,
+  imports: [
+    RouterLink,
+    MatButtonModule,
+    MatProgressBarModule,
+    MatTooltipModule,
+    DdIcon,
+    LoadingState,
+    ErrorState,
+  ],
+  templateUrl: './lesson-player.html',
+  styleUrl: './lesson-player.scss',
 })
 export class LessonPlayer implements OnDestroy {
   private readonly learning = inject(LearningApi);
@@ -192,7 +80,15 @@ export class LessonPlayer implements OnDestroy {
   protected readonly playback = signal<LessonPlaybackGrant | null>(null);
   protected readonly playbackFailure = signal<string | null>(null);
   protected readonly completing = signal(false);
+  protected readonly curriculum = signal<CourseCurriculum | null>(null);
 
+  /** Focus mode hides the curriculum; the drawer signal drives small screens. */
+  protected readonly focusMode = signal(false);
+  protected readonly drawerOpen = signal(false);
+
+  private readonly videoRef = viewChild<ElementRef<HTMLVideoElement>>('lessonVideo');
+
+  private hls: Hls | null = null;
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private watchedSeconds = 0;
 
@@ -206,20 +102,28 @@ export class LessonPlayer implements OnDestroy {
     return current.kind === 'error' ? current.message : '';
   });
 
+  /** True when the grant names a real provider stream rather than the deterministic stand-in. */
+  protected readonly realStream = computed(() => {
+    const grant = this.playback();
+    return grant !== null && !grant.playbackId.startsWith('playback-');
+  });
+
   constructor() {
-    // Re-resolve on every navigation, including lesson-to-lesson moves that reuse the
-    // component instance.
+    // Re-resolve on every navigation, including lesson-to-lesson moves that
+    // reuse the component instance.
     this.route.paramMap.subscribe(() => this.load());
   }
 
   ngOnDestroy(): void {
     this.stopHeartbeat();
+    this.detachStream();
   }
 
   protected load(): void {
     const lessonId = this.route.snapshot.paramMap.get('lessonId') ?? '';
 
     this.stopHeartbeat();
+    this.detachStream();
     this.playback.set(null);
     this.playbackFailure.set(null);
     this.state.set({ kind: 'loading' });
@@ -228,9 +132,22 @@ export class LessonPlayer implements OnDestroy {
       next: (lesson) => {
         this.watchedSeconds = lesson.lastPositionSeconds;
         this.state.set({ kind: 'ready', lesson });
+        this.loadCurriculum(lesson.courseSlug);
       },
       error: (error: unknown) =>
         this.state.set({ kind: 'error', message: toApiFailure(error).message }),
+    });
+  }
+
+  /** The curriculum rail is an enhancement; the lesson stands without it. */
+  private loadCurriculum(courseSlug: string): void {
+    if (this.curriculum()?.slug === courseSlug) {
+      return;
+    }
+
+    this.learning.getCurriculum(courseSlug).subscribe({
+      next: (curriculum) => this.curriculum.set(curriculum),
+      error: () => this.curriculum.set(null),
     });
   }
 
@@ -247,9 +164,52 @@ export class LessonPlayer implements OnDestroy {
       next: (grant) => {
         this.playback.set(grant);
         this.startHeartbeat(lesson.id);
+
+        if (!grant.playbackId.startsWith('playback-')) {
+          // Wait a tick for the <video> element to render, then attach.
+          setTimeout(() => void this.attachStream(grant), 0);
+        }
       },
       error: (error: unknown) => this.playbackFailure.set(toApiFailure(error).message),
     });
+  }
+
+  /**
+   * Streams the signed HLS rendition. Safari plays HLS natively; elsewhere
+   * hls.js is imported on demand and attached to the same element.
+   */
+  private async attachStream(grant: LessonPlaybackGrant): Promise<void> {
+    const video = this.videoRef()?.nativeElement;
+
+    if (!video) {
+      return;
+    }
+
+    const src = `https://stream.mux.com/${grant.playbackId}.m3u8${
+      grant.token ? `?token=${encodeURIComponent(grant.token)}` : ''
+    }`;
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+    } else {
+      const { default: HlsCtor } = await import('hls.js');
+
+      if (!HlsCtor.isSupported()) {
+        this.playbackFailure.set('This browser cannot play the lesson video.');
+        return;
+      }
+
+      this.hls = new HlsCtor();
+      this.hls.loadSource(src);
+      this.hls.attachMedia(video);
+    }
+
+    video.play().catch(() => undefined);
+  }
+
+  private detachStream(): void {
+    this.hls?.destroy();
+    this.hls = null;
   }
 
   protected complete(): void {
@@ -261,7 +221,7 @@ export class LessonPlayer implements OnDestroy {
 
     this.completing.set(true);
 
-    this.learning.recordProgress(lesson.id, this.watchedSeconds, true).subscribe({
+    this.learning.recordProgress(lesson.id, this.currentPosition(), true).subscribe({
       next: (recorded) => {
         this.completing.set(false);
         this.state.set({
@@ -269,8 +229,8 @@ export class LessonPlayer implements OnDestroy {
           lesson: { ...lesson, completedAtUtc: recorded.completedAtUtc },
         });
 
-        // Finishing the last lesson sends the learner back to their shelf; otherwise flow
-        // straight into the next one.
+        // Finishing the last lesson sends the learner back to their shelf;
+        // otherwise flow straight into the next one.
         if (recorded.courseCompleted) {
           void this.router.navigate(['/my-learning']);
         } else if (lesson.nextLessonId) {
@@ -281,18 +241,44 @@ export class LessonPlayer implements OnDestroy {
     });
   }
 
+  protected toggleFocus(): void {
+    this.focusMode.update((focused) => !focused);
+  }
+
+  protected toggleDrawer(): void {
+    this.drawerOpen.update((open) => !open);
+  }
+
+  protected closeDrawer(): void {
+    this.drawerOpen.set(false);
+  }
+
+  /** Formats an estimated duration as "12 min". */
+  protected minutes(seconds: number | null): string {
+    return seconds === null ? '' : `${Math.max(1, Math.round(seconds / 60))} min`;
+  }
+
   /**
-   * Reports the watch position periodically while playback is open.
-   *
-   * The interval is deliberately coarse — the resume position is a convenience, and the
-   * server ignores anything that would move it backwards.
+   * The truest position available: the playing video's clock when a real
+   * stream is attached, the coarse heartbeat counter otherwise.
+   */
+  private currentPosition(): number {
+    const video = this.videoRef()?.nativeElement;
+
+    return video && video.currentTime > 0 ? Math.floor(video.currentTime) : this.watchedSeconds;
+  }
+
+  /**
+   * Reports the watch position periodically while playback is open. The
+   * interval is deliberately coarse — the resume position is a convenience,
+   * and the server ignores anything that would move it backwards.
    */
   private startHeartbeat(lessonId: string): void {
     this.stopHeartbeat();
 
     this.heartbeat = setInterval(() => {
       this.watchedSeconds += 15;
-      this.learning.recordProgress(lessonId, this.watchedSeconds, false).subscribe({
+      this.learning.recordProgress(lessonId, this.currentPosition(), false).subscribe({
         error: () => undefined,
       });
     }, 15_000);

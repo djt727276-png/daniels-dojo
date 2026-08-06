@@ -11,6 +11,7 @@ import {
   ForumThreadSummary,
 } from '../../core/community/community-api';
 import { CommunityStatus, MemberApi } from '../../core/community/member-api';
+import { DdIcon } from '../../shared/ui/icon/dd-icon';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 import { StatusChip } from '../../shared/ui/status-chip/status-chip';
@@ -39,6 +40,7 @@ type HomeState =
     RouterLink,
     MatCardModule,
     MatButtonModule,
+    DdIcon,
     PageHeader,
     StatusChip,
     LoadingState,
@@ -47,12 +49,12 @@ type HomeState =
   ],
   template: `
     <div class="dd-page dd-stack">
-      <app-page-header
-        title="Community"
-        description="Ask questions, share what you are building, and help other members."
-      >
+      <app-page-header title="The Dojo" description="Ask. Share. Sharpen your craft.">
         <a matButton="outlined" routerLink="/community/search" data-testid="search-link">
-          Search discussions
+          <span class="community__btn-line">
+            <dd-icon name="search" [size]="18" />
+            Search discussions
+          </span>
         </a>
       </app-page-header>
 
@@ -94,8 +96,9 @@ type HomeState =
               <ul class="categories" data-testid="category-list">
                 @for (category of current.categories; track category.slug) {
                   <li>
-                    <mat-card appearance="outlined">
-                      <mat-card-content>
+                    <div class="dd-card dd-card--interactive categories__card">
+                      <span class="dd-icon-chip"><dd-icon name="message" [size]="20" /></span>
+                      <div class="categories__body">
                         <h2 class="categories__title">
                           <a
                             [routerLink]="['/community/c', category.slug]"
@@ -109,8 +112,8 @@ type HomeState =
                           {{ category.threadCount }}
                           {{ category.threadCount === 1 ? 'thread' : 'threads' }}
                         </p>
-                      </mat-card-content>
-                    </mat-card>
+                      </div>
+                    </div>
                   </li>
                 }
               </ul>
@@ -176,9 +179,33 @@ type HomeState =
       list-style: none;
     }
 
+    .categories__card {
+      display: flex;
+      gap: var(--dd-space-4);
+      height: 100%;
+    }
+
+    .categories__body {
+      min-width: 0;
+    }
+
+    .community__btn-line {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--dd-space-2);
+    }
+
     .categories__title {
       font-size: var(--dd-text-lg);
-      font-weight: var(--dd-weight-medium);
+      font-weight: var(--dd-weight-semibold);
+
+      a {
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
     }
 
     .categories__description {
