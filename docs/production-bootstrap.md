@@ -80,3 +80,20 @@ deploy fail-closed (`Disabled`).
 The web production environment file for the prod SWA build needs the matching public
 values: SPA client id `b409da1f…`, api scope `api://d26462c9…/access_as_user`, redirect
 URIs on the `brave-flower` origin, API base URL on the prod API FQDN.
+
+## The email claim (why sign-in returned 403 at first)
+
+External ID does not put an `email` claim in an **access** token unless the API app
+registration asks for it. Without it the token validates, but local provisioning refuses —
+a new customer has no address to contact — and every authenticated call returns 403 with
+"signed in but cannot access".
+
+Both API registrations now request it (`optionalClaims.accessToken = [email]`):
+`Daniels Dojo Prod API` (`d26462c9…`) and `Daniels Dojo Dev API` (`1495cace…`). A customer
+already holding a token from before the change must sign out and sign in again to receive
+one that carries the claim.
+
+The API deliberately trusts only the single claim named by
+`Authentication:EntraExternalId:EmailClaimName` rather than guessing across candidates, so
+this is configuration, not code. When the claim is absent the API now logs the claim
+*names* present (never their values) so the next occurrence is diagnosed in one look.
