@@ -3,3 +3,7 @@ dist/
 coverage/
 node_modules/
 package-lock.json
+
+# Playwright run artifacts and visual-QA captures (generated, git-ignored)
+e2e/.artifacts/
+e2e/screenshots/
