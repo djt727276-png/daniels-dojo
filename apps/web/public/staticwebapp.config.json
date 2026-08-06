@@ -2,9 +2,7 @@
   "$schema": "https://json.schemastore.org/staticwebapp.config.json",
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": [
-      "*.{css,js,ico,png,jpg,jpeg,svg,webp,txt,xml,json,map,woff,woff2}"
-    ]
+    "exclude": ["*.{css,js,ico,png,jpg,jpeg,svg,webp,txt,xml,json,map,woff,woff2}"]
   },
   "responseOverrides": {
     "404": {
