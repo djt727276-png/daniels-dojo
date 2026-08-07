@@ -1,46 +1,130 @@
-<div class="dd-page dd-stack">
+<div class="home">
+  <!-- Full-bleed hero: the digital dojo at night, drawn in CSS + the brand
+       mark. No raster crop — the atmosphere is gradients, the grid motif, and
+       the torii watermark, so it stays sharp and theme-aware at every size. -->
   <section class="hero" aria-labelledby="hero-heading">
-    <h1 id="hero-heading" class="hero__title">Build software the way it ships</h1>
-    <p class="hero__lead">
-      {{ title }} teaches the parts of professional engineering that tutorials skip: real
-      architecture, real data, and the discipline that keeps a system running once people depend on
-      it.
-    </p>
-    <div class="hero__actions">
-      <a matButton="filled" routerLink="/courses" data-testid="hero-browse">Browse courses</a>
-      <a matButton="outlined" routerLink="/community">Visit the community</a>
+    <div class="hero__atmosphere" aria-hidden="true">
+      <div class="hero__grid dd-motif-grid"></div>
+      <div class="hero__glow hero__glow--indigo"></div>
+      <div class="hero__glow hero__glow--gold"></div>
+      <svg class="hero__gate" viewBox="0 0 48 44" aria-hidden="true" focusable="false">
+        <path d="M2 6.4C8.9 3.4 16.2 1.9 24 1.9S39.1 3.4 46 6.4l-1 4.7H3Z" />
+        <rect x="6.6" y="15.7" width="34.8" height="4.2" rx="1.3" />
+        <path d="M9 11.1h5.5L15.8 44H8.2Z" />
+        <path d="M33.5 11.1H39L39.8 44h-7.6Z" />
+      </svg>
+    </div>
+
+    <div class="hero__content">
+      <h1 id="hero-heading" class="dd-display hero__title">
+        Build real software.<br />Train like a professional.
+      </h1>
+      <p class="hero__lead">
+        A project-driven dojo for developers who want to understand the craft, not just copy the
+        code.
+      </p>
+      <div class="hero__actions">
+        <a matButton="filled" class="hero__cta" routerLink="/courses" data-testid="hero-browse">
+          <span class="hero__cta-line">
+            <dd-icon name="compass" [size]="18" />
+            Explore courses
+          </span>
+        </a>
+        <a matButton="outlined" class="hero__secondary" routerLink="/about">
+          <span class="hero__cta-line">
+            <dd-icon name="play" [size]="18" />
+            See how it works
+          </span>
+        </a>
+      </div>
     </div>
   </section>
 
-  @if (loaded() && featured().length > 0) {
-    <section aria-labelledby="featured-heading" class="dd-stack">
-      <h2 id="featured-heading">Featured courses</h2>
-
-      <ul class="featured" data-testid="featured-courses">
-        @for (course of featured(); track course.slug) {
-          <li>
-            <mat-card appearance="outlined" class="featured__card">
-              <mat-card-content class="featured__body">
-                <h3 class="featured__title">
-                  <a [routerLink]="['/courses', course.slug]">{{ course.title }}</a>
-                </h3>
-                <p class="featured__summary">{{ course.summary }}</p>
-                <mat-chip-set aria-label="Course level">
-                  <mat-chip disabled>{{ formatLevel(course.level) }}</mat-chip>
-                </mat-chip-set>
-                @if (course.lifetimePrice) {
-                  <p class="featured__price">{{ formatPrice(course.lifetimePrice) }}</p>
-                }
-              </mat-card-content>
-              <mat-card-actions>
-                <a matButton [routerLink]="['/courses', course.slug]">View course</a>
-              </mat-card-actions>
-            </mat-card>
-          </li>
-        }
-      </ul>
+  <div class="dd-page dd-stack home__body">
+    <!-- The three disciplines. Static product copy, not fabricated data. -->
+    <section class="home__pillars" aria-label="What the dojo teaches">
+      <article class="dd-card dd-card--interactive pillar">
+        <span class="dd-icon-chip"><dd-icon name="code" [size]="22" /></span>
+        <h2 class="dd-title">Build</h2>
+        <p class="dd-muted">
+          Hands-on projects that mirror real-world challenges. Write code that matters.
+        </p>
+        <a class="pillar__link" routerLink="/courses">
+          Learn more
+          <dd-icon name="arrow-right" [size]="16" />
+        </a>
+      </article>
+      <article class="dd-card dd-card--interactive pillar">
+        <span class="dd-icon-chip dd-icon-chip--blue"><dd-icon name="bulb" [size]="22" /></span>
+        <h2 class="dd-title">Understand</h2>
+        <p class="dd-muted">
+          Deep dives into concepts, patterns, and trade-offs. Know why, not just how.
+        </p>
+        <a class="pillar__link" routerLink="/courses">
+          Learn more
+          <dd-icon name="arrow-right" [size]="16" />
+        </a>
+      </article>
+      <article class="dd-card dd-card--interactive pillar">
+        <span class="dd-icon-chip dd-icon-chip--gold"><dd-icon name="rocket" [size]="22" /></span>
+        <h2 class="dd-title">Ship</h2>
+        <p class="dd-muted">
+          From idea to production. Learn modern workflows and ship with confidence.
+        </p>
+        <a class="pillar__link" routerLink="/courses">
+          Learn more
+          <dd-icon name="arrow-right" [size]="16" />
+        </a>
+      </article>
     </section>
-  }
 
-  <app-system-status-card />
+    <!-- Featured courses come straight from the live catalog; nothing here is
+         curated separately, so the page can never show a course the catalog
+         would not. -->
+    @if (loaded() && featured().length > 0) {
+      <section aria-labelledby="featured-heading" class="dd-card featured">
+        <div class="featured__intro">
+          <p class="dd-label">Featured training paths</p>
+          <h2 id="featured-heading" class="dd-h2">
+            Master modern development through real projects
+          </h2>
+          <p class="dd-muted">
+            Structured paths. Practical skills. Measurable growth. Each path is a journey from
+            fundamentals to fluency.
+          </p>
+        </div>
+
+        <ul class="featured__list" data-testid="featured-courses">
+          @for (course of featured(); track course.slug) {
+            <li>
+              <a class="featured__card" [routerLink]="['/courses', course.slug]">
+                <div class="featured__body">
+                  <p class="dd-label featured__flag">
+                    <dd-icon name="star" [size]="14" />
+                    Featured path
+                  </p>
+                  <h3 class="dd-title">{{ course.title }}</h3>
+                  <p class="dd-muted featured__summary">{{ course.summary }}</p>
+                  <div class="featured__meta">
+                    <span class="featured__chip">{{ formatLevel(course.level) }}</span>
+                    @for (tag of course.tags; track tag) {
+                      <span class="featured__chip featured__chip--tag">{{ tag }}</span>
+                    }
+                    @if (course.lifetimePrice) {
+                      <span class="featured__price">{{ formatPrice(course.lifetimePrice) }}</span>
+                    }
+                  </div>
+                </div>
+                <span class="featured__go" aria-hidden="true">
+                  <dd-icon name="arrow-right" [size]="20" />
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <app-system-status-card />
+  </div>
 </div>

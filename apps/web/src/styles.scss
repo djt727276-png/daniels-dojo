@@ -1,9 +1,13 @@
 /* -------------------------------------------------------------------------
-   Daniel's Dojo — global styles.
+   Daniel's Dojo — global styles (v2 visual system).
 
    Order matters: tokens first so the Material theme can reference them, then
-   the theme, then a small reset and shared utility layer. Components never
+   the theme, then the reset and the shared primitive layer. Components never
    declare raw colours or sizes; everything resolves back to `_tokens.scss`.
+
+   The primitive layer is deliberately global: cards, page scaffolding,
+   typography roles, tiles, and empty/loading states live here once, so each
+   component stylesheet carries only its own layout.
    ------------------------------------------------------------------------- */
 
 @use 'styles/tokens';
@@ -44,7 +48,9 @@ figure {
 }
 
 a {
-  color: var(--dd-primary);
+  color: var(--dd-tertiary);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 a:hover {
@@ -53,9 +59,64 @@ a:hover {
 
 /* Clearly visible keyboard focus on every interactive element. */
 :focus-visible {
-  outline: 3px solid var(--dd-primary);
+  outline: 2px solid var(--dd-tertiary);
   outline-offset: 2px;
   border-radius: var(--dd-radius-sm);
+}
+
+/* --- Typography roles ---------------------------------------------------- */
+
+.dd-display {
+  font-size: var(--dd-text-display);
+  font-weight: var(--dd-weight-bold);
+  line-height: var(--dd-leading-tight);
+  letter-spacing: -0.02em;
+}
+
+.dd-h1 {
+  font-size: var(--dd-text-h1);
+  font-weight: var(--dd-weight-bold);
+  line-height: var(--dd-leading-tight);
+  letter-spacing: -0.015em;
+}
+
+.dd-h2 {
+  font-size: var(--dd-text-h2);
+  font-weight: var(--dd-weight-semibold);
+  line-height: var(--dd-leading-snug);
+  letter-spacing: -0.01em;
+}
+
+.dd-title {
+  font-size: var(--dd-text-title);
+  font-weight: var(--dd-weight-semibold);
+  line-height: var(--dd-leading-snug);
+}
+
+.dd-label {
+  font-size: var(--dd-text-xs);
+  font-weight: var(--dd-weight-medium);
+  letter-spacing: var(--dd-tracking-label);
+  text-transform: uppercase;
+  color: var(--dd-on-surface-variant);
+}
+
+.dd-caption {
+  font-size: var(--dd-text-xs);
+  color: var(--dd-on-surface-variant);
+}
+
+.dd-muted {
+  color: var(--dd-on-surface-variant);
+}
+
+/* Numeric emphasis for stats and progress readouts. */
+.dd-stat {
+  font-size: var(--dd-text-3xl);
+  font-weight: var(--dd-weight-bold);
+  line-height: var(--dd-leading-tight);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 /* --- Shared layout utilities -------------------------------------------- */
@@ -77,6 +138,135 @@ a:hover {
   max-width: var(--dd-reading-max);
   line-height: var(--dd-leading-base);
 }
+
+/* --- Surfaces ------------------------------------------------------------
+   Every card in the product: navy surface, 1px outline, soft radius, subtle
+   indigo ambient edge on raise/hover per the design-system board. */
+
+.dd-card {
+  background: var(--dd-surface);
+  border: 1px solid var(--dd-outline);
+  border-radius: var(--dd-radius-lg);
+  padding: var(--dd-space-5);
+  box-shadow: var(--dd-elevation-1);
+}
+
+.dd-card--flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+.dd-card--interactive {
+  transition:
+    border-color var(--dd-motion-hover) var(--dd-easing-standard),
+    box-shadow var(--dd-motion-hover) var(--dd-easing-standard),
+    transform var(--dd-motion-hover) var(--dd-easing-standard);
+}
+
+.dd-card--interactive:hover {
+  border-color: var(--dd-outline-strong);
+  box-shadow: var(--dd-elevation-2);
+  transform: translateY(-2px);
+}
+
+.dd-card--gold {
+  border-color: color-mix(in srgb, var(--dd-accent) 45%, var(--dd-outline));
+}
+
+/* Panel: a quieter inset surface for grouping inside cards. */
+.dd-panel {
+  background: var(--dd-surface-variant);
+  border-radius: var(--dd-radius-md);
+  padding: var(--dd-space-4);
+}
+
+/* --- Stat tiles ---------------------------------------------------------- */
+
+.dd-tile {
+  background: var(--dd-surface);
+  border: 1px solid var(--dd-outline);
+  border-radius: var(--dd-radius-lg);
+  padding: var(--dd-space-4) var(--dd-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-1);
+}
+
+.dd-tile__label {
+  font-size: var(--dd-text-xs);
+  font-weight: var(--dd-weight-medium);
+  letter-spacing: var(--dd-tracking-label);
+  text-transform: uppercase;
+  color: var(--dd-on-surface-variant);
+}
+
+.dd-tile__value {
+  font-size: var(--dd-text-2xl);
+  font-weight: var(--dd-weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* --- Icon chip: a rounded square holding a single icon. ------------------ */
+
+.dd-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: var(--dd-radius-md);
+  background: var(--dd-primary-container);
+  color: var(--dd-on-primary-container);
+  border: 1px solid var(--dd-outline);
+}
+
+.dd-icon-chip--gold {
+  background: var(--dd-accent-container);
+  color: var(--dd-on-accent-container);
+}
+
+.dd-icon-chip--blue {
+  background: var(--dd-tertiary-container);
+  color: var(--dd-on-tertiary-container);
+}
+
+/* --- Progress ------------------------------------------------------------ */
+
+.dd-progress {
+  height: 0.5rem;
+  border-radius: var(--dd-radius-pill);
+  background: var(--dd-surface-variant);
+  overflow: hidden;
+}
+
+.dd-progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--dd-primary);
+  transition: width var(--dd-motion-celebrate) var(--dd-easing-decelerate);
+}
+
+.dd-progress__fill--gold {
+  background: linear-gradient(90deg, var(--dd-accent), #f4d27c);
+}
+
+/* --- Grids --------------------------------------------------------------- */
+
+.dd-grid {
+  display: grid;
+  gap: var(--dd-space-4);
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.dd-tile-row {
+  display: grid;
+  gap: var(--dd-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+}
+
+/* --- Accessibility helpers ----------------------------------------------- */
 
 /* Visible only to assistive technology. Used for status regions and for
    labels that would otherwise be conveyed by position or colour alone. */
@@ -100,13 +290,107 @@ a:hover {
   z-index: 1000;
   padding: var(--dd-space-2) var(--dd-space-4);
   background: var(--dd-surface);
-  color: var(--dd-primary);
+  color: var(--dd-tertiary);
   font-weight: var(--dd-weight-medium);
   border-radius: var(--dd-radius-sm);
   box-shadow: var(--dd-elevation-2);
-  transition: top var(--dd-motion-fast) var(--dd-easing-standard);
+  transition: top var(--dd-motion-hover) var(--dd-easing-standard);
 }
 
 .dd-skip-link:focus {
   top: var(--dd-space-2);
 }
+
+/* --- Entrance motion ------------------------------------------------------
+   Applied by shared state/list components; ~180ms content enter from the
+   motion spec. Reduced motion zeroes the duration tokens. */
+
+@keyframes dd-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.dd-enter {
+  animation: dd-enter var(--dd-motion-enter) var(--dd-easing-decelerate) both;
+}
+
+@keyframes dd-celebrate {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.dd-celebrate {
+  animation: dd-celebrate var(--dd-motion-celebrate) var(--dd-easing-decelerate) both;
+}
+
+/* --- Loading skeletons ---------------------------------------------------- */
+
+@keyframes dd-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.dd-skeleton {
+  border-radius: var(--dd-radius-sm);
+  background: linear-gradient(
+      100deg,
+      var(--dd-surface-variant) 40%,
+      var(--dd-surface-raised) 50%,
+      var(--dd-surface-variant) 60%
+    )
+    0 0 / 200% 100%;
+  animation: dd-shimmer 1.6s linear infinite;
+  color: transparent;
+  user-select: none;
+}
+
+/* --- Background motifs ----------------------------------------------------
+   Subtle, low-contrast geometry for hero and empty areas. Background only;
+   never competes with content. */
+
+.dd-motif-grid {
+  background-image:
+    linear-gradient(var(--dd-outline) 1px, transparent 1px),
+    linear-gradient(90deg, var(--dd-outline) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.25;
+}
+
+/* --- Material refinements -------------------------------------------------
+   Applied globally so Material components sit naturally on the dojo
+   surfaces without per-component overrides. */
+
+.mat-mdc-card,
+.mat-mdc-dialog-surface {
+  border: 1px solid var(--dd-outline);
+}
+
+.mat-mdc-table {
+  background: transparent;
+}
+
+/* Density: comfortable touch targets. Material buttons already meet 44px
+   with density 0; icon buttons keep their 48px tap target. */

@@ -33,7 +33,10 @@ import { MatCardModule } from '@angular/material/card';
     }
 
     .stat__label {
-      font-size: var(--dd-text-sm);
+      font-size: var(--dd-text-xs);
+      font-weight: var(--dd-weight-medium);
+      letter-spacing: var(--dd-tracking-label);
+      text-transform: uppercase;
       color: var(--dd-on-surface-variant);
     }
 
@@ -41,6 +44,8 @@ import { MatCardModule } from '@angular/material/card';
       font-size: var(--dd-text-2xl);
       font-weight: var(--dd-weight-bold);
       line-height: var(--dd-leading-tight);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
     }
 
     .stat__note {

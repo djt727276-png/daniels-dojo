@@ -11,6 +11,7 @@ import {
   CommunityApi,
 } from '../../core/community/community-api';
 import { AuthService } from '../../core/auth/auth.service';
+import { DdIcon } from '../../shared/ui/icon/dd-icon';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 import { StatCard } from '../../shared/ui/stat-card/stat-card';
@@ -40,6 +41,7 @@ function describeAction(entry: AuditActivityEntry): string {
     RouterLink,
     MatCardModule,
     MatButtonModule,
+    DdIcon,
     PageHeader,
     StatCard,
     LoadingState,
@@ -49,8 +51,10 @@ function describeAction(entry: AuditActivityEntry): string {
   template: `
     <div class="dd-page dd-stack">
       <app-page-header
-        title="Administration"
-        [description]="'Signed in as ' + (session()?.displayName ?? 'an administrator') + '.'"
+        title="Command Center"
+        [description]="
+          'Daniel’s Dojo · signed in as ' + (session()?.displayName ?? 'an administrator') + '.'
+        "
       >
         <a matButton="filled" routerLink="/admin/catalog" data-testid="admin-open-catalog">
           Open the catalog
@@ -139,33 +143,83 @@ function describeAction(entry: AuditActivityEntry): string {
         </section>
 
         <section class="dd-stack" aria-labelledby="admin-links-heading">
-          <h2 id="admin-links-heading" class="admin__heading">Where to go</h2>
+          <h2 id="admin-links-heading" class="dd-label">Workspaces</h2>
 
-          <mat-card appearance="outlined">
-            <mat-card-content class="links">
-              <a routerLink="/admin/catalog" data-testid="link-catalog">
-                Catalog — author courses, sections, and lessons
-              </a>
-              <a routerLink="/admin/pricing" data-testid="link-pricing">
-                Pricing — offers and prices held in this database
-              </a>
-              <a routerLink="/admin/community" data-testid="link-moderation">
-                Moderation — {{ view.openReports }} open
-                {{ view.openReports === 1 ? 'report' : 'reports' }} and
-                {{ view.forumCategories }} forum
-                {{ view.forumCategories === 1 ? 'category' : 'categories' }}
-              </a>
-              <a routerLink="/admin/users" data-testid="link-users">
-                Members — accounts, roles, and manual grants
-              </a>
-              <a routerLink="/admin/records" data-testid="link-records">
-                Records — certificates, orders, payment events, audit trail
-              </a>
-              <a routerLink="/admin/ops" data-testid="link-ops">
-                Operations — runtime, switches, and announcements
-              </a>
-            </mat-card-content>
-          </mat-card>
+          <div class="links">
+            <a
+              class="dd-card dd-card--interactive links__card"
+              routerLink="/admin/catalog"
+              data-testid="link-catalog"
+            >
+              <span class="dd-icon-chip"><dd-icon name="grid" [size]="20" /></span>
+              <span class="links__text">
+                <span class="links__name">Catalog</span>
+                <span class="links__hint">Author courses, sections, and lessons</span>
+              </span>
+            </a>
+            <a
+              class="dd-card dd-card--interactive links__card"
+              routerLink="/admin/pricing"
+              data-testid="link-pricing"
+            >
+              <span class="dd-icon-chip"><dd-icon name="tag" [size]="20" /></span>
+              <span class="links__text">
+                <span class="links__name">Pricing</span>
+                <span class="links__hint">Offers and prices held in this database</span>
+              </span>
+            </a>
+            <a
+              class="dd-card dd-card--interactive links__card"
+              routerLink="/admin/community"
+              data-testid="link-moderation"
+            >
+              <span class="dd-icon-chip"><dd-icon name="flag" [size]="20" /></span>
+              <span class="links__text">
+                <span class="links__name">Moderation</span>
+                <span class="links__hint">
+                  {{ view.openReports }} open {{ view.openReports === 1 ? 'report' : 'reports' }} ·
+                  {{ view.forumCategories }} forum
+                  {{ view.forumCategories === 1 ? 'category' : 'categories' }}
+                </span>
+              </span>
+              @if (view.openReports > 0) {
+                <span class="links__attention" aria-hidden="true">{{ view.openReports }}</span>
+              }
+            </a>
+            <a
+              class="dd-card dd-card--interactive links__card"
+              routerLink="/admin/users"
+              data-testid="link-users"
+            >
+              <span class="dd-icon-chip"><dd-icon name="users" [size]="20" /></span>
+              <span class="links__text">
+                <span class="links__name">Members</span>
+                <span class="links__hint">Accounts, roles, and manual grants</span>
+              </span>
+            </a>
+            <a
+              class="dd-card dd-card--interactive links__card"
+              routerLink="/admin/records"
+              data-testid="link-records"
+            >
+              <span class="dd-icon-chip"><dd-icon name="file" [size]="20" /></span>
+              <span class="links__text">
+                <span class="links__name">Records</span>
+                <span class="links__hint">Certificates, orders, payment events, audit trail</span>
+              </span>
+            </a>
+            <a
+              class="dd-card dd-card--interactive links__card"
+              routerLink="/admin/ops"
+              data-testid="link-ops"
+            >
+              <span class="dd-icon-chip"><dd-icon name="wrench" [size]="20" /></span>
+              <span class="links__text">
+                <span class="links__name">Operations</span>
+                <span class="links__hint">Runtime, switches, and announcements</span>
+              </span>
+            </a>
+          </div>
         </section>
 
         <section class="dd-stack" aria-labelledby="admin-activity-heading">
@@ -211,9 +265,52 @@ function describeAction(entry: AuditActivityEntry): string {
     }
 
     .links {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+      gap: var(--dd-space-4);
+    }
+
+    .links__card {
+      display: flex;
+      align-items: center;
+      gap: var(--dd-space-4);
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .links__card:hover {
+      color: inherit;
+    }
+
+    .links__text {
       display: flex;
       flex-direction: column;
-      gap: var(--dd-space-3);
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .links__name {
+      font-weight: var(--dd-weight-semibold);
+    }
+
+    .links__hint {
+      font-size: var(--dd-text-sm);
+      color: var(--dd-on-surface-variant);
+    }
+
+    .links__attention {
+      margin-left: auto;
+      min-width: 1.5rem;
+      height: 1.5rem;
+      padding-inline: 0.4rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--dd-radius-pill);
+      background: var(--dd-danger-container);
+      color: var(--dd-danger);
+      font-weight: var(--dd-weight-semibold);
+      font-size: var(--dd-text-sm);
     }
 
     .activity {

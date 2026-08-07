@@ -34,10 +34,11 @@ html {
         primary: mat.$azure-palette,
         tertiary: mat.$violet-palette,
       ),
-      // System font stack — no web font is downloaded, so typography never
-      // depends on a network request.
+      // Inter is self-hosted through the build; the system stack is the
+      // fallback so typography never blocks on a font file.
       typography: (
           plain-family: (
+            'Inter',
             system-ui,
             -apple-system,
             'Segoe UI',
@@ -47,6 +48,7 @@ html {
             sans-serif,
           ),
           brand-family: (
+            'Inter',
             system-ui,
             -apple-system,
             'Segoe UI',

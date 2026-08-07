@@ -42,6 +42,12 @@ export class LoadingState {
   imports: [MatButtonModule],
   template: `
     <div class="state">
+      <svg class="state__mark" viewBox="0 0 48 44" aria-hidden="true" focusable="false">
+        <path d="M2 6.4C8.9 3.4 16.2 1.9 24 1.9S39.1 3.4 46 6.4l-1 4.7H3Z" />
+        <rect x="6.6" y="15.7" width="34.8" height="4.2" rx="1.3" />
+        <path d="M9 11.1h5.5L15.8 44H8.2Z" />
+        <path d="M33.5 11.1H39L39.8 44h-7.6Z" />
+      </svg>
       <h2 class="state__title">{{ title() }}</h2>
       <p class="state__message">{{ message() }}</p>
       @if (actionLabel()) {
@@ -65,9 +71,14 @@ export class LoadingState {
       border-radius: var(--dd-radius-lg);
     }
 
+    .state__mark {
+      width: 3rem;
+      fill: color-mix(in srgb, var(--dd-on-surface-variant) 45%, transparent);
+    }
+
     .state__title {
       font-size: var(--dd-text-lg);
-      font-weight: var(--dd-weight-medium);
+      font-weight: var(--dd-weight-semibold);
     }
 
     .state__message {

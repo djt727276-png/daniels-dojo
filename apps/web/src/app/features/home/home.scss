@@ -1,81 +1,259 @@
-@use '../../../styles/tokens' as tokens;
+@use '../../../styles/breakpoints' as tokens;
+
+/* --- Hero: the dojo gate at night ----------------------------------------- */
 
 .hero {
-  display: flex;
-  flex-direction: column;
-  gap: var(--dd-space-4);
-  padding: var(--dd-space-8) var(--dd-space-6);
-  background: var(--dd-primary-container);
-  color: var(--dd-on-primary-container);
-  border-radius: var(--dd-radius-lg);
+  position: relative;
+  overflow: hidden;
+
+  /* The gate at night is the identity in both themes: the hero stays ink even
+     in light mode, so its foreground is pinned rather than themed. */
+  background: #090d18;
+  border-bottom: 1px solid var(--dd-outline);
 }
 
 .hero__title {
-  max-width: 24ch;
-  font-size: var(--dd-text-3xl);
-  font-weight: var(--dd-weight-bold);
-  line-height: var(--dd-leading-tight);
+  color: #f7f8fc;
 }
 
 .hero__lead {
-  max-width: var(--dd-reading-max);
+  color: #a6aec6;
+}
+
+.hero__grid {
+  --dd-outline: #2a3350;
+}
+
+.hero__atmosphere {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero__grid {
+  position: absolute;
+  inset: 0;
+  mask-image: radial-gradient(70% 90% at 70% 40%, black, transparent 75%);
+}
+
+.hero__glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+}
+
+.hero__glow--indigo {
+  width: 44rem;
+  height: 26rem;
+  right: -10rem;
+  top: -6rem;
+  background: color-mix(in srgb, var(--dd-primary) 26%, transparent);
+}
+
+.hero__glow--gold {
+  width: 22rem;
+  height: 16rem;
+  right: 8rem;
+  bottom: -8rem;
+  background: color-mix(in srgb, var(--dd-gold) 15%, transparent);
+}
+
+/* The gate watermark rises from the right edge like the reference artwork. */
+.hero__gate {
+  position: absolute;
+  right: 4%;
+  bottom: -12%;
+  width: min(24rem, 46vw);
+  fill: color-mix(in srgb, var(--dd-gold) 34%, transparent);
+  opacity: 0.5;
+}
+
+.hero__content {
+  position: relative;
+  max-width: var(--dd-content-max);
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, 6.5rem) var(--dd-space-4);
+}
+
+.hero__title {
+  max-width: 15ch;
+}
+
+.hero__lead {
+  margin-top: var(--dd-space-4);
+  max-width: 42ch;
+  font-size: var(--dd-text-lg);
+  color: var(--dd-on-surface-variant);
 }
 
 .hero__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--dd-space-3);
+  margin-top: var(--dd-space-6);
 }
 
-.featured {
+.hero__cta-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dd-space-2);
+}
+
+/* The primary invitation carries the gold of the reference storefront. */
+a.hero__cta {
+  background: var(--dd-gold);
+  color: #241b02;
+  border-radius: var(--dd-radius-sm);
+  min-height: 3rem;
+  padding-inline: var(--dd-space-5);
+  font-weight: var(--dd-weight-semibold);
+}
+
+a.hero__cta:hover {
+  background: color-mix(in srgb, var(--dd-gold) 88%, white);
+}
+
+/* Outlined secondary sits on the pinned-ink hero, so its colours are pinned too. */
+a.hero__secondary {
+  min-height: 3rem;
+  border-radius: var(--dd-radius-sm);
+  padding-inline: var(--dd-space-5);
+  color: #6ea8ff;
+  border-color: #3d4870;
+}
+
+/* --- Pillars --------------------------------------------------------------- */
+
+.home__pillars {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
   gap: var(--dd-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.pillar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-3);
+}
+
+.pillar__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dd-space-2);
+  margin-top: auto;
+  font-weight: var(--dd-weight-medium);
+  font-size: var(--dd-text-sm);
+  text-decoration: none;
+}
+
+/* --- Featured -------------------------------------------------------------- */
+
+.featured__intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-2);
+  max-width: 38rem;
+  margin-bottom: var(--dd-space-5);
+}
+
+.featured__list {
+  list-style: none;
   margin: 0;
   padding: 0;
-  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dd-space-3);
 }
 
 .featured__card {
-  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--dd-space-4);
+  padding: var(--dd-space-5);
+  border: 1px solid var(--dd-outline);
+  border-radius: var(--dd-radius-md);
+  background: var(--dd-surface-variant);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color var(--dd-motion-hover) var(--dd-easing-standard),
+    box-shadow var(--dd-motion-hover) var(--dd-easing-standard);
+}
+
+.featured__card:hover {
+  border-color: var(--dd-outline-strong);
+  box-shadow: var(--dd-elevation-2);
+  color: inherit;
 }
 
 .featured__body {
   display: flex;
   flex-direction: column;
   gap: var(--dd-space-2);
+  min-width: 0;
 }
 
-.featured__title {
-  font-size: var(--dd-text-lg);
-
-  a {
-    text-decoration: none;
-  }
-
-  a:hover {
-    text-decoration: underline;
-  }
+.featured__flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dd-space-1);
+  color: var(--dd-accent);
 }
 
 .featured__summary {
+  max-width: 60ch;
+}
+
+.featured__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dd-space-2);
+  margin-top: var(--dd-space-1);
+}
+
+.featured__chip {
+  font-size: var(--dd-text-xs);
+  font-weight: var(--dd-weight-medium);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--dd-radius-pill);
+  background: var(--dd-primary-container);
+  color: var(--dd-on-primary-container);
+}
+
+.featured__chip--tag {
+  background: var(--dd-surface);
   color: var(--dd-on-surface-variant);
+  border: 1px solid var(--dd-outline);
 }
 
 .featured__price {
-  font-weight: var(--dd-weight-bold);
+  font-weight: var(--dd-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.featured__go {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+  border: 1px solid var(--dd-outline);
+  border-radius: var(--dd-radius-md);
+  color: var(--dd-on-surface-variant);
+  transition: all var(--dd-motion-hover) var(--dd-easing-standard);
+}
+
+.featured__card:hover .featured__go {
+  background: var(--dd-primary);
+  border-color: var(--dd-primary);
+  color: var(--dd-on-primary);
 }
 
 @media (max-width: tokens.$breakpoint-sm) {
-  .hero {
-    padding: var(--dd-space-6) var(--dd-space-4);
-  }
-
-  .hero__title {
-    font-size: var(--dd-text-2xl);
-  }
-
-  .featured {
-    grid-template-columns: 1fr;
+  .featured__go {
+    display: none;
   }
 }

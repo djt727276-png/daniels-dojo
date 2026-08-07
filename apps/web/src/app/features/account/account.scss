@@ -1,33 +1,60 @@
 .account {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-width: 40rem;
+  gap: var(--dd-space-4);
+  max-width: 42rem;
 }
 
 .account__title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: var(--dd-text-h1);
+  font-weight: var(--dd-weight-bold);
+  letter-spacing: -0.015em;
 }
 
 .account__lead,
 .account__notice {
   margin: 0;
-  line-height: 1.5;
+  line-height: var(--dd-leading-base);
 }
 
 .account__notice {
-  color: #44403c;
+  color: var(--dd-on-surface-variant);
+}
+
+.account__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--dd-space-5);
+}
+
+.account__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--dd-primary);
+  color: var(--dd-on-primary);
+  font-size: var(--dd-text-xl);
+  font-weight: var(--dd-weight-semibold);
 }
 
 .account__details {
   display: grid;
   grid-template-columns: minmax(6rem, auto) 1fr;
-  gap: 0.5rem 1rem;
+  gap: var(--dd-space-2) var(--dd-space-4);
   margin: 0;
 
   dt {
-    font-weight: 600;
+    font-size: var(--dd-text-xs);
+    font-weight: var(--dd-weight-medium);
+    letter-spacing: var(--dd-tracking-label);
+    text-transform: uppercase;
+    color: var(--dd-on-surface-variant);
+    align-self: center;
   }
 
   dd {
@@ -38,46 +65,47 @@
 
 .account__admin {
   margin: 0;
-  font-weight: 600;
+  align-self: flex-start;
+  padding: var(--dd-space-2) var(--dd-space-4);
+  font-weight: var(--dd-weight-semibold);
+  background: var(--dd-accent-container);
+  color: var(--dd-on-accent-container);
+  border-radius: var(--dd-radius-pill);
 }
 
 .account__action {
   align-self: flex-start;
-  padding: 0.6rem 1.1rem;
+  padding: 0.6rem 1.4rem;
+  min-height: 2.75rem;
   font: inherit;
-  font-weight: 600;
-  color: #fff;
-  background-color: #1f2937;
+  font-weight: var(--dd-weight-semibold);
+  color: var(--dd-on-primary);
+  background-color: var(--dd-primary);
   border: 1px solid transparent;
-  border-radius: 0.375rem;
+  border-radius: var(--dd-radius-sm);
   cursor: pointer;
+  transition: background var(--dd-motion-hover) var(--dd-easing-standard);
 
   &:hover {
-    background-color: #111827;
-  }
-
-  &:focus-visible {
-    outline: 3px solid #2563eb;
-    outline-offset: 2px;
+    background-color: var(--dd-primary-hover);
   }
 }
 
 .account__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--dd-space-3);
 }
 
 /* Sign in is the quieter twin: same size and focus ring, inverted colors, so a newcomer's
    eye lands on Create account first without hiding the returning customer's path. */
 .account__action--secondary {
-  color: #1f2937;
+  color: var(--dd-on-surface);
   background-color: transparent;
-  border-color: #1f2937;
+  border-color: var(--dd-outline-strong);
 
   &:hover {
-    color: #fff;
-    background-color: #111827;
+    background-color: var(--dd-surface-variant);
   }
 }
 

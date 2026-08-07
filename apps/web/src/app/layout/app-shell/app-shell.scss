@@ -1,127 +1,271 @@
-@use '../../../styles/tokens' as tokens;
+/* The shell: glass top bar, the dojo rail, and the phone bottom navigation.
+   All colour comes from role tokens; the rail reads as the darkest surface
+   with the content floating on ink beside it. */
+
+@use '../../../styles/breakpoints' as tokens;
 
 :host {
   display: block;
-  min-height: 100vh;
+  height: 100%;
 }
+
+/* --- Top bar -------------------------------------------------------------- */
 
 .app-toolbar {
   position: sticky;
   top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: var(--dd-space-2);
-  min-height: var(--dd-toolbar-height);
+  z-index: 100;
+  height: var(--dd-toolbar-height);
   padding-inline: var(--dd-space-3);
-  background: var(--dd-primary);
-  color: var(--dd-on-primary);
-  box-shadow: var(--dd-elevation-2);
+  gap: var(--dd-space-1);
+  background: var(--dd-glass);
+  backdrop-filter: blur(14px);
+  color: var(--dd-on-surface);
+  border-bottom: 1px solid var(--dd-outline);
 }
 
 .app-toolbar__brand {
-  font-size: var(--dd-text-lg);
-  font-weight: var(--dd-weight-bold);
-  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: var(--dd-space-1);
+  color: var(--dd-on-surface);
   text-decoration: none;
-  white-space: nowrap;
+  font-size: var(--dd-text-base);
 }
 
 .app-toolbar__spacer {
-  flex: 1 1 auto;
+  flex: 1;
+}
+
+.app-toolbar__menu,
+.app-toolbar__action {
+  color: var(--dd-on-surface-variant);
+  position: relative;
+}
+
+.app-toolbar__action:hover {
+  color: var(--dd-on-surface);
 }
 
 .app-toolbar__account {
-  flex: 0 1 auto;
-  min-width: 0;
-  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dd-space-2);
+  color: var(--dd-on-surface);
+  border: 1px solid var(--dd-outline);
+  border-radius: var(--dd-radius-pill);
+  padding-inline: var(--dd-space-2) var(--dd-space-3);
+  min-height: 2.5rem;
 }
 
-/* The truncation lives on an inner span because Material's own button label wrapper
-   does not shrink — without this the name pushes the theme toggle off a phone screen. */
-.app-toolbar__account-name {
-  display: block;
-  max-width: 12rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.app-toolbar__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--dd-primary);
+  color: var(--dd-on-primary);
+  font-size: var(--dd-text-sm);
+  font-weight: var(--dd-weight-semibold);
 }
 
-.app-toolbar__menu-glyph {
-  font-size: 1.25rem;
-  line-height: 1;
+.app-toolbar__role {
+  font-size: var(--dd-text-xs);
+  font-weight: var(--dd-weight-semibold);
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--dd-radius-pill);
+  background: var(--dd-accent-container);
+  color: var(--dd-on-accent-container);
 }
+
+.app-toolbar__signin {
+  border-radius: var(--dd-radius-pill);
+  background: var(--dd-primary);
+  color: var(--dd-on-primary);
+  padding-inline: var(--dd-space-4);
+}
+
+@media (max-width: tokens.$breakpoint-sm) {
+  .app-toolbar__account-name {
+    display: none;
+  }
+}
+
+/* Live-count badge shared by the bell and bottom navigation. */
+.app-badge {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.15rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding-inline: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--dd-radius-pill);
+  background: var(--dd-primary);
+  color: var(--dd-on-primary);
+  font-size: 0.66rem;
+  font-weight: var(--dd-weight-semibold);
+  transition: transform var(--dd-motion-hover) var(--dd-easing-standard);
+}
+
+.app-menu-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dd-space-2);
+}
+
+/* --- Layout + rail -------------------------------------------------------- */
 
 .app-layout {
-  height: calc(100vh - var(--dd-toolbar-height));
+  /* Toolbar and dev banner are ordinary flow siblings above. */
+  height: calc(100% - var(--dd-toolbar-height));
   background: var(--dd-background);
 }
 
 .app-sidenav {
   width: var(--dd-sidenav-width);
-  padding-block: var(--dd-space-2);
+  background: var(--dd-background);
   border-right: 1px solid var(--dd-outline);
-  background: var(--dd-surface);
+  padding: var(--dd-space-3) var(--dd-space-2);
 }
 
 .app-nav__list {
-  margin: 0;
-  padding: 0;
   list-style: none;
+  margin: 0 0 var(--dd-space-2);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-/* Comfortable hit target on a phone, matching the toolbar's rhythm. */
+.app-nav__heading {
+  font-size: var(--dd-text-xs);
+  font-weight: var(--dd-weight-medium);
+  letter-spacing: var(--dd-tracking-label);
+  text-transform: uppercase;
+  color: var(--dd-on-surface-variant);
+  margin: var(--dd-space-4) var(--dd-space-3) var(--dd-space-2);
+}
+
+.app-nav__heading--admin {
+  color: var(--dd-accent);
+}
+
 .app-nav__link {
-  display: block;
-  padding: var(--dd-space-3) var(--dd-space-4);
-  color: var(--dd-on-surface);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--dd-space-3);
+  padding: 0.55rem var(--dd-space-3);
+  border-radius: var(--dd-radius-sm);
+  color: var(--dd-on-surface-variant);
   text-decoration: none;
-  border-radius: 0;
+  font-size: var(--dd-text-sm);
+  font-weight: var(--dd-weight-medium);
+  min-height: 2.6rem;
+  transition:
+    background var(--dd-motion-hover) var(--dd-easing-standard),
+    color var(--dd-motion-hover) var(--dd-easing-standard);
 }
 
 .app-nav__link:hover {
   background: var(--dd-surface-variant);
+  color: var(--dd-on-surface);
 }
 
-.app-nav__heading {
-  padding: var(--dd-space-4) var(--dd-space-4) var(--dd-space-1);
-  margin: 0;
-  border-top: 1px solid var(--dd-outline);
-  font-size: var(--dd-text-xs);
-  font-weight: var(--dd-weight-bold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--dd-on-surface-variant);
-}
-
-/* Active route is marked by weight and a left rule as well as colour, so the
-   cue is never carried by colour alone. */
 .app-nav--active {
-  font-weight: var(--dd-weight-bold);
-  color: var(--dd-primary);
-  box-shadow: inset 3px 0 0 var(--dd-primary);
+  background: var(--dd-primary-container);
+  color: var(--dd-on-primary-container);
 }
+
+/* Active-route indicator: the indigo bar at the rail edge. */
+.app-nav--active::before {
+  content: '';
+  position: absolute;
+  left: -0.5rem;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  border-radius: var(--dd-radius-pill);
+  background: var(--dd-primary);
+}
+
+.app-nav__badge {
+  margin-left: auto;
+  min-width: 1.2rem;
+  padding: 0 0.3rem;
+  height: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--dd-radius-pill);
+  background: var(--dd-primary);
+  color: var(--dd-on-primary);
+  font-size: 0.7rem;
+  font-weight: var(--dd-weight-semibold);
+}
+
+/* --- Main ----------------------------------------------------------------- */
 
 .app-main {
-  display: block;
-  min-height: 100%;
-}
-
-.app-main:focus {
+  min-height: 60vh;
   outline: none;
 }
 
-@media (max-width: tokens.$breakpoint-md) {
-  .app-toolbar__account-name {
-    max-width: 6.5rem;
+/* --- Bottom navigation (phones) ------------------------------------------- */
+
+.app-bottom-nav {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 100;
+  display: none;
+  height: var(--dd-bottom-nav-height);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--dd-glass);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--dd-outline);
+}
+
+.app-bottom-nav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--dd-on-surface-variant);
+  text-decoration: none;
+  font-size: 0.66rem;
+  font-weight: var(--dd-weight-medium);
+  min-height: 44px;
+}
+
+.app-bottom-nav__icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.app-bottom-nav__icon-wrap .app-badge {
+  top: -0.35rem;
+  right: -0.55rem;
+}
+
+.app-bottom-nav--active {
+  color: var(--dd-primary);
+}
+
+@media (max-width: tokens.$breakpoint-sm) {
+  .app-bottom-nav {
+    display: flex;
   }
-}
 
-.app-toolbar__theme {
-  margin-right: var(--dd-space-2);
-}
-
-.app-toolbar__theme-glyph {
-  font-size: 1.1rem;
-  line-height: 1;
+  /* Content and footer clear the fixed bar. */
+  .app-main {
+    padding-bottom: var(--dd-bottom-nav-height);
+  }
 }

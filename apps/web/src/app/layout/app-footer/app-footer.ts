@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { DdLogo } from '../../shared/ui/brand/dd-logo';
+
 /** A configurable social destination. Empty url hides the entry entirely. */
 interface SocialLink {
   readonly label: string;
@@ -16,13 +18,13 @@ interface SocialLink {
  */
 @Component({
   selector: 'app-footer',
-  imports: [RouterLink],
+  imports: [RouterLink, DdLogo],
   template: `
     <footer class="footer" role="contentinfo">
       <div class="footer__inner">
         <div class="footer__col">
-          <p class="footer__brand">Daniel's Dojo</p>
-          <p class="footer__tagline">Learn by building.</p>
+          <p class="footer__brand"><dd-logo variant="lockup" /></p>
+          <p class="footer__tagline">Build real software. Train like a professional.</p>
         </div>
 
         <nav class="footer__col" aria-label="Explore">
@@ -62,7 +64,7 @@ interface SocialLink {
     .footer {
       margin-top: var(--dd-space-10);
       padding: var(--dd-space-8) var(--dd-space-4) var(--dd-space-5);
-      background: var(--dd-surface-variant);
+      background: var(--dd-surface);
       border-top: 1px solid var(--dd-outline);
     }
 
@@ -91,8 +93,7 @@ interface SocialLink {
     }
 
     .footer__brand {
-      font-size: var(--dd-text-lg);
-      font-weight: var(--dd-weight-bold);
+      font-size: var(--dd-text-base);
     }
 
     .footer__tagline {

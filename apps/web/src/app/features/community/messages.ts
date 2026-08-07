@@ -18,6 +18,24 @@ import { RealtimeService } from '../../core/community/realtime';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 
+/** Compact "10:24 AM" for today, "Mon" this week, or a short date otherwise. */
+function formatWhen(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const dayMs = 86_400_000;
+  const sameDay = date.toDateString() === now.toDateString();
+
+  if (sameDay) {
+    return new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(date);
+  }
+
+  if (now.getTime() - date.getTime() < 6 * dayMs) {
+    return new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(date);
+  }
+
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date);
+}
+
 /** The member's conversation list. */
 @Component({
   selector: 'app-message-list',
@@ -55,23 +73,28 @@ import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-view
         <ul class="conversations" data-testid="conversation-list">
           @for (conversation of conversations(); track conversation.id) {
             <li>
-              <mat-card appearance="outlined">
-                <mat-card-content class="conversations__row">
-                  <a
-                    class="conversations__handle"
-                    [routerLink]="['/messages', conversation.id]"
-                    [attr.data-testid]="'conversation-' + conversation.id"
-                  >
-                    {{ conversation.otherHandle }}
-                  </a>
-
-                  @if (conversation.unreadCount > 0) {
-                    <span class="conversations__unread">
-                      {{ conversation.unreadCount }} unread
-                    </span>
+              <a
+                class="conversations__row"
+                [class.conversations__row--unread]="conversation.unreadCount > 0"
+                [routerLink]="['/messages', conversation.id]"
+                [attr.data-testid]="'conversation-' + conversation.id"
+              >
+                <span class="conversations__avatar" aria-hidden="true">
+                  {{ conversation.otherHandle.charAt(0).toUpperCase() }}
+                </span>
+                <span class="conversations__text">
+                  <span class="conversations__handle">{{ conversation.otherHandle }}</span>
+                  @if (conversation.lastMessageAtUtc; as last) {
+                    <span class="conversations__when">{{ when(last) }}</span>
                   }
-                </mat-card-content>
-              </mat-card>
+                </span>
+                @if (conversation.unreadCount > 0) {
+                  <span class="conversations__unread">
+                    {{ conversation.unreadCount }}
+                    <span class="dd-visually-hidden">unread</span>
+                  </span>
+                }
+              </a>
             </li>
           }
         </ul>
@@ -82,7 +105,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-view
     .conversations {
       display: flex;
       flex-direction: column;
-      gap: var(--dd-space-3);
+      gap: var(--dd-space-2);
       margin: 0;
       padding: 0;
       list-style: none;
@@ -90,28 +113,83 @@ import { EmptyState, ErrorState, LoadingState } from '../../shared/ui/state-view
 
     .conversations__row {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
       gap: var(--dd-space-3);
+      padding: var(--dd-space-3) var(--dd-space-4);
+      background: var(--dd-surface);
+      border: 1px solid var(--dd-outline);
+      border-radius: var(--dd-radius-md);
+      text-decoration: none;
+      color: inherit;
+      min-height: 3.5rem;
+      transition:
+        border-color var(--dd-motion-hover) var(--dd-easing-standard),
+        background var(--dd-motion-hover) var(--dd-easing-standard);
+    }
+
+    .conversations__row:hover {
+      border-color: var(--dd-outline-strong);
+      background: var(--dd-surface-variant);
+      color: inherit;
+    }
+
+    .conversations__row--unread .conversations__handle {
+      font-weight: var(--dd-weight-bold);
+    }
+
+    .conversations__avatar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--dd-primary-container);
+      color: var(--dd-on-primary-container);
+      font-weight: var(--dd-weight-semibold);
+    }
+
+    .conversations__text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
     }
 
     .conversations__handle {
-      flex: 1 1 10rem;
       font-weight: var(--dd-weight-medium);
+      overflow-wrap: anywhere;
+    }
+
+    .conversations__when {
+      font-size: var(--dd-text-xs);
+      color: var(--dd-on-surface-variant);
     }
 
     .conversations__unread {
-      padding: 0.1rem var(--dd-space-3);
-      background: var(--dd-info-container);
-      color: var(--dd-info);
+      min-width: 1.4rem;
+      height: 1.4rem;
+      padding-inline: 0.35rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--dd-primary);
+      color: var(--dd-on-primary);
       border-radius: var(--dd-radius-pill);
-      font-size: var(--dd-text-sm);
+      font-size: var(--dd-text-xs);
+      font-weight: var(--dd-weight-semibold);
     }
   `,
 })
 export class MessageList {
   private readonly api = inject(CommunityApi);
   private readonly realtime = inject(RealtimeService);
+
+  /** Compact relative-or-date label for a conversation's last activity. */
+  protected when(iso: string): string {
+    return formatWhen(iso);
+  }
 
   protected readonly conversations = signal<readonly ConversationSummary[]>([]);
   protected readonly loading = signal(true);
@@ -213,20 +291,36 @@ type ConversationState =
             <ol class="conversation" data-testid="message-list">
               @for (message of messages(); track message.id) {
                 <li
-                  class="conversation__item"
+                  class="conversation__item dd-enter"
                   [class.conversation__item--own]="message.isOwn"
                   [attr.data-testid]="'message-' + message.id"
                 >
                   @if (message.withheld) {
                     <p class="conversation__withheld">This message was deleted.</p>
                   } @else {
-                    <pre class="conversation__body">{{ message.body }}</pre>
+                    <!-- Bodies are plain text; fenced blocks the sender wrote render
+                         monospace, everything else stays a text binding. -->
+                    @for (segment of segments(message.body); track $index) {
+                      @if (segment.code) {
+                        <pre class="conversation__code"><code>{{ segment.text }}</code></pre>
+                      } @else if (segment.text.trim()) {
+                        <pre class="conversation__body">{{ segment.text }}</pre>
+                      }
+                    }
                   }
+
+                  <span class="conversation__meta">
+                    {{ when(message.createdAtUtc) }}
+                    @if (message.editedAtUtc) {
+                      · edited
+                    }
+                  </span>
 
                   @if (message.isOwn && !message.withheld) {
                     <button
                       matButton
                       type="button"
+                      class="conversation__delete"
                       [disabled]="busy()"
                       (click)="remove(message)"
                       [attr.data-testid]="'delete-' + message.id"
@@ -286,15 +380,20 @@ type ConversationState =
     }
 
     .conversation__item {
-      max-width: 40rem;
-      padding: var(--dd-space-3);
+      max-width: min(40rem, 85%);
+      padding: var(--dd-space-3) var(--dd-space-4);
       background: var(--dd-surface-variant);
+      border: 1px solid var(--dd-outline);
       border-radius: var(--dd-radius-lg);
+      border-bottom-left-radius: var(--dd-radius-sm);
     }
 
     .conversation__item--own {
       align-self: flex-end;
-      background: var(--dd-info-container);
+      background: var(--dd-primary-container);
+      border-color: transparent;
+      border-bottom-left-radius: var(--dd-radius-lg);
+      border-bottom-right-radius: var(--dd-radius-sm);
     }
 
     .conversation__body {
@@ -304,6 +403,28 @@ type ConversationState =
       line-height: var(--dd-leading-base);
       white-space: pre-wrap;
       overflow-wrap: anywhere;
+    }
+
+    .conversation__code {
+      margin: var(--dd-space-2) 0;
+      padding: var(--dd-space-3);
+      background: var(--dd-ink, var(--dd-background));
+      border: 1px solid var(--dd-outline);
+      border-radius: var(--dd-radius-sm);
+      font-family: var(--dd-font-mono);
+      font-size: var(--dd-text-sm);
+      overflow-x: auto;
+    }
+
+    .conversation__meta {
+      display: block;
+      margin-top: var(--dd-space-1);
+      font-size: var(--dd-text-xs);
+      color: var(--dd-on-surface-variant);
+    }
+
+    .conversation__delete {
+      margin-top: var(--dd-space-1);
     }
 
     .conversation__withheld,
@@ -342,6 +463,22 @@ export class Conversation {
   protected readonly form = new FormGroup({
     body: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
   });
+
+  protected when(iso: string): string {
+    return formatWhen(iso);
+  }
+
+  /** Splits a plain-text body into text and sender-fenced code segments. */
+  protected segments(body: string): readonly { text: string; code: boolean }[] {
+    const parts = body.split('```');
+
+    // No closing fence — treat the whole body as text.
+    if (parts.length < 3) {
+      return [{ text: body, code: false }];
+    }
+
+    return parts.map((text, index) => ({ text, code: index % 2 === 1 }));
+  }
 
   constructor() {
     this.load();

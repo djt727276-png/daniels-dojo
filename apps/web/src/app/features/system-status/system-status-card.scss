@@ -1,64 +1,66 @@
 .status-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-5);
+  background: var(--dd-surface);
+  border: 1px solid var(--dd-outline);
+  border-radius: var(--dd-radius-lg);
+  box-shadow: var(--dd-elevation-1);
+  padding: var(--dd-space-5);
   max-width: 32rem;
 }
 
 .status-card__title {
-  font-size: var(--font-size-lg);
-  margin-bottom: var(--space-4);
+  font-size: var(--dd-text-xs);
+  font-weight: var(--dd-weight-medium);
+  letter-spacing: var(--dd-tracking-label);
+  text-transform: uppercase;
+  color: var(--dd-on-surface-variant);
+  margin-bottom: var(--dd-space-4);
 }
 
 .status-card__body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--dd-space-4);
 }
 
 .status-card__details {
   margin: 0;
   display: grid;
-  gap: var(--space-2);
+  grid-template-columns: auto 1fr;
+  gap: var(--dd-space-2) var(--dd-space-4);
+  font-size: var(--dd-text-sm);
+
+  dt {
+    color: var(--dd-on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 .status-card__row {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-4);
-  border-top: 1px solid var(--color-border);
-  padding-top: var(--space-2);
-}
-
-.status-card__row dt {
-  color: var(--color-text-muted);
-}
-
-.status-card__row dd {
-  margin: 0;
-  font-weight: 500;
-  text-align: right;
-  word-break: break-word;
+  display: contents;
 }
 
 .status-card__message {
-  color: var(--color-text-muted);
+  color: var(--dd-on-surface-variant);
 }
 
 .status-card__retry {
   align-self: flex-start;
+  padding: var(--dd-space-2) var(--dd-space-4);
+  min-height: 2.5rem;
+  border: 1px solid var(--dd-outline);
+  border-radius: var(--dd-radius-sm);
+  background: var(--dd-surface-variant);
+  color: var(--dd-on-surface);
   font: inherit;
-  font-weight: 600;
-  color: var(--color-primary-contrast);
-  background: var(--color-primary);
-  border: none;
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-4);
+  font-weight: var(--dd-weight-medium);
   cursor: pointer;
+  transition: background var(--dd-motion-hover) var(--dd-easing-standard);
 }
 
 .status-card__retry:hover {
-  filter: brightness(0.95);
+  background: var(--dd-surface-raised);
 }

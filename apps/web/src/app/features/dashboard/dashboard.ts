@@ -7,6 +7,7 @@ import { RouterLink } from '@angular/router';
 import { toApiFailure } from '../../core/api/problem-details';
 import { Dashboard as DashboardModel, MemberApi } from '../../core/community/member-api';
 import { LearningApi, MyLearningCourse } from '../../core/learning/learning-api';
+import { DdIcon } from '../../shared/ui/icon/dd-icon';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { ErrorState, LoadingState } from '../../shared/ui/state-views/state-views';
 import { StatCard } from '../../shared/ui/stat-card/stat-card';
@@ -29,6 +30,7 @@ type DashboardState =
     MatCardModule,
     MatProgressBarModule,
     MatButtonModule,
+    DdIcon,
     PageHeader,
     StatCard,
     LoadingState,
@@ -55,30 +57,34 @@ type DashboardState =
             </app-page-header>
 
             @if (continueCourse(); as next) {
-              <mat-card appearance="outlined" class="dashboard__continue">
-                <mat-card-content class="dashboard__continue-body">
-                  <div class="dashboard__continue-text">
-                    <p class="dashboard__continue-label">Continue learning</p>
-                    <h2 class="dashboard__continue-title">{{ next.title }}</h2>
-                    <p class="dashboard__note">
-                      {{ next.completedLessons }} of {{ next.totalLessons }} lessons complete
-                    </p>
+              <section class="dd-card dashboard__continue" aria-label="Continue training">
+                <div class="dashboard__continue-text">
+                  <p class="dd-label dashboard__continue-label">Continue training</p>
+                  <h2 class="dd-h2">{{ next.title }}</h2>
+                  <p class="dashboard__note">
+                    {{ next.completedLessons }} of {{ next.totalLessons }} lessons complete
+                  </p>
+                  <div class="dashboard__progress-row">
                     <mat-progress-bar
                       mode="determinate"
                       [value]="next.percentComplete"
                       [attr.aria-label]="'Progress in ' + next.title"
                     />
+                    <span class="dashboard__percent">{{ next.percentComplete }}%</span>
                   </div>
-                  <div class="dashboard__continue-actions">
-                    @if (next.resumeLessonId; as resume) {
-                      <a matButton="filled" [routerLink]="['/learn/lessons', resume]">
-                        {{ next.completedLessons === 0 ? 'Start' : 'Continue' }}
-                      </a>
-                    }
-                    <a matButton routerLink="/my-learning">My Learning</a>
-                  </div>
-                </mat-card-content>
-              </mat-card>
+                </div>
+                <div class="dashboard__continue-actions">
+                  @if (next.resumeLessonId; as resume) {
+                    <a matButton="filled" [routerLink]="['/learn/lessons', resume]">
+                      <span class="dashboard__cta-line">
+                        <dd-icon name="play" [size]="18" />
+                        {{ next.completedLessons === 0 ? 'Start lesson' : 'Continue lesson' }}
+                      </span>
+                    </a>
+                  }
+                  <a matButton routerLink="/my-learning">My Learning</a>
+                </div>
+              </section>
             }
 
             <section class="stats" aria-label="Your activity">
@@ -159,16 +165,21 @@ type DashboardState =
   `,
   styles: `
     .dashboard__continue {
-      /* The one card allowed the gold accent: it marks the member's own momentum. */
-      border-left: 4px solid var(--dd-accent);
-    }
-
-    .dashboard__continue-body {
       display: flex;
       flex-wrap: wrap;
       gap: var(--dd-space-5);
       align-items: center;
       justify-content: space-between;
+
+      /* The member's own momentum earns the gold accent and a faint indigo field. */
+      border-left: 4px solid var(--dd-accent);
+      background:
+        radial-gradient(
+          120% 160% at 90% 0%,
+          color-mix(in srgb, var(--dd-primary) 14%, transparent),
+          transparent 60%
+        ),
+        var(--dd-surface);
     }
 
     .dashboard__continue-text {
@@ -179,16 +190,29 @@ type DashboardState =
     }
 
     .dashboard__continue-label {
-      font-size: var(--dd-text-sm);
-      font-weight: var(--dd-weight-medium);
       color: var(--dd-accent);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
     }
 
-    .dashboard__continue-title {
-      font-size: var(--dd-text-xl);
-      font-weight: var(--dd-weight-medium);
+    .dashboard__progress-row {
+      display: flex;
+      align-items: center;
+      gap: var(--dd-space-3);
+      margin-top: var(--dd-space-2);
+    }
+
+    .dashboard__progress-row mat-progress-bar {
+      flex: 1;
+    }
+
+    .dashboard__percent {
+      font-weight: var(--dd-weight-bold);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .dashboard__cta-line {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--dd-space-2);
     }
 
     .dashboard__continue-actions {

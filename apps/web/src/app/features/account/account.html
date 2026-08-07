@@ -29,14 +29,19 @@
       }
 
       @case ('signedIn') {
-        <dl class="account__details">
-          <dt>Name</dt>
-          <dd data-testid="account-name">{{ session()?.displayName }}</dd>
-          <dt>Email</dt>
-          <dd data-testid="account-email">{{ session()?.email }}</dd>
-          <dt>Roles</dt>
-          <dd data-testid="account-roles">{{ session()?.roles?.join(', ') }}</dd>
-        </dl>
+        <div class="account__identity dd-card">
+          <span class="account__badge" aria-hidden="true">{{
+            (session()?.displayName ?? '?').charAt(0).toUpperCase()
+          }}</span>
+          <dl class="account__details">
+            <dt>Name</dt>
+            <dd data-testid="account-name">{{ session()?.displayName }}</dd>
+            <dt>Email</dt>
+            <dd data-testid="account-email">{{ session()?.email }}</dd>
+            <dt>Roles</dt>
+            <dd data-testid="account-roles">{{ session()?.roles?.join(', ') }}</dd>
+          </dl>
+        </div>
 
         @if (isAdmin()) {
           <p class="account__admin" data-testid="admin-available">You have administrator access.</p>

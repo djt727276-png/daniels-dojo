@@ -1,0 +1,10 @@
+/* Sass-only breakpoint values — no CSS output, so component stylesheets can
+   @use this without duplicating the token layer into their bundles. Media
+   queries cannot read custom properties, hence Sass variables. */
+
+$breakpoint-sm: 37.5rem; // 600px  — small tablet / large phone
+$breakpoint-md: 56.25rem; // 900px  — tablet, sidenav becomes permanent
+$breakpoint-lg: 75rem; // 1200px — wide desktop
+
+// Narrowest layout the product must remain usable at.
+$min-supported-width: 20rem; // 320px
