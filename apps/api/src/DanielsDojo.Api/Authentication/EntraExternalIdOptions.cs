@@ -52,6 +52,16 @@ public sealed class EntraExternalIdOptions
     /// </summary>
     public string EmailClaimName { get; set; } = "email";
 
+    /// <summary>
+    /// Whether the tenant's own sign-up flow verifies the email address. External ID's
+    /// email one-time-passcode flows prove ownership of the address at sign-up yet emit no
+    /// <c>email_verified</c> claim in their tokens, so a deployment on such a tenant states
+    /// the fact here explicitly. When true, a token carrying the configured email claim but
+    /// no verification claim at all is treated as verified; a token that explicitly asserts
+    /// <c>email_verified: false</c> is still unverified. Off by default.
+    /// </summary>
+    public bool EmailVerifiedByUserFlow { get; set; }
+
     /// <summary>Exact browser origin allowed to call the API during development.</summary>
     [Url]
     public string AllowedCorsOrigin { get; set; } = "http://localhost:4200";
