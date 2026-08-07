@@ -47,7 +47,7 @@ internal static class ExternalIdentityClaims
             ObjectId: objectId,
             Email: ReadEmail(principal, options),
             DisplayName: First(principal, "name", ClaimTypes.Name),
-            EmailVerified: ReadEmailVerified(principal));
+            EmailVerified: ReadEmailVerified(principal, options));
     }
 
     /// <summary>Whether the token carries the required delegated scope.</summary>
@@ -79,11 +79,19 @@ internal static class ExternalIdentityClaims
         return string.IsNullOrWhiteSpace(email) ? null : email.Trim();
     }
 
-    private static bool ReadEmailVerified(ClaimsPrincipal principal)
+    private static bool ReadEmailVerified(ClaimsPrincipal principal, EntraExternalIdOptions options)
     {
+        // An explicit claim from the provider always wins, in either direction.
         string? value = First(principal, "email_verified", "verified_primary_email");
+        if (bool.TryParse(value, out bool verified))
+        {
+            return verified;
+        }
 
-        return bool.TryParse(value, out bool verified) && verified;
+        // No claim either way. External ID's email-OTP user flows verify the address at
+        // sign-up but never emit a verification claim, so a deployment on such a tenant
+        // opts in to treating a present address as flow-verified.
+        return options.EmailVerifiedByUserFlow && ReadEmail(principal, options) is not null;
     }
 
     private static string? First(ClaimsPrincipal principal, params string[] claimTypes)

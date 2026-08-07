@@ -59,7 +59,7 @@ public sealed class TestTokenIssuer : IDisposable
         string? authorizedParty = SpaClientId,
         string? email = "customer@example.test",
         string? displayName = "Test Customer",
-        bool emailVerified = true,
+        bool? emailVerified = true,
         DateTime? notBefore = null,
         DateTime? expires = null,
         RSA? signingKeyOverride = null)
@@ -76,7 +76,12 @@ public sealed class TestTokenIssuer : IDisposable
         AddIfPresent(claims, "azp", authorizedParty);
         AddIfPresent(claims, EmailClaim, email);
         AddIfPresent(claims, "name", displayName);
-        claims.Add(new Claim("email_verified", emailVerified ? "true" : "false"));
+        // Null omits the claim entirely — the shape Entra External ID actually produces,
+        // which never emits email_verified in its tokens.
+        if (emailVerified is not null)
+        {
+            claims.Add(new Claim("email_verified", emailVerified.Value ? "true" : "false"));
+        }
 
         RsaSecurityKey signingKey = new(signingKeyOverride ?? _rsa) { KeyId = KeyId };
 
