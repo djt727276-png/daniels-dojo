@@ -64,6 +64,97 @@ public sealed class CatalogSlugTests
 }
 
 /// <summary>
+/// Deriving a slug from a title, which is what happens when an author names a lesson and never
+/// sees a URL segment at all.
+/// </summary>
+public sealed class CatalogSlugFromTitleTests
+{
+    [Theory]
+    [InlineData("Introduction to C#", "introduction-to-csharp")]
+    [InlineData("Getting Started with C++", "getting-started-with-cplusplus")]
+    [InlineData("EF Core & Data Access", "ef-core-data-access")]
+    [InlineData("  Trimmed   Spacing  ", "trimmed-spacing")]
+    [InlineData("Café Culture", "cafe-culture")]
+    [InlineData("Lesson #1: Setup", "lesson-1-setup")]
+    [InlineData("dotnet 10", "dotnet-10")]
+    [InlineData("Already-Kebab-Case", "already-kebab-case")]
+    [InlineData("What's new?", "what-s-new")]
+    public void DerivesTheExpectedSlug(string title, string expected) =>
+        Assert.Equal(expected, CatalogSlug.FromTitle(title));
+
+    [Theory]
+    [InlineData("Introduction to C#")]
+    [InlineData("!!!")]
+    [InlineData("Go")]
+    [InlineData("日本語")]
+    [InlineData(null)]
+    [InlineData("")]
+    public void AlwaysProducesAValidSlug(string? title) =>
+        Assert.True(CatalogSlug.IsValid(CatalogSlug.FromTitle(title)));
+
+    [Theory]
+    [InlineData("!!!")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void FallsBackWhenNothingSurvives(string? title) =>
+        Assert.Equal(CatalogSlug.Fallback, CatalogSlug.FromTitle(title));
+
+    [Fact]
+    public void ExtendsATitleTooShortToBeASlug() =>
+        Assert.Equal($"go-{CatalogSlug.Fallback}", CatalogSlug.FromTitle("Go"));
+
+    [Fact]
+    public void TruncatesALongTitleWithoutEndingOnAHyphen()
+    {
+        string slug = CatalogSlug.FromTitle(string.Join(' ', Enumerable.Repeat("word", 60)));
+
+        Assert.True(CatalogSlug.IsValid(slug));
+        Assert.True(slug.Length <= CatalogSlug.MaxLength);
+        Assert.DoesNotContain("--", slug, StringComparison.Ordinal);
+    }
+}
+
+/// <summary>
+/// Numbering a derived slug past its siblings. Two lessons may legitimately share a title, and
+/// the second one still needs its own URL segment.
+/// </summary>
+public sealed class CatalogSlugUniquenessTests
+{
+    [Fact]
+    public void KeepsTheCandidateWhenFree() =>
+        Assert.Equal("intro", CatalogSlug.MakeUnique("intro", static _ => false));
+
+    [Fact]
+    public void NumbersPastTheTakenSlugs()
+    {
+        HashSet<string> taken = ["intro", "intro-2", "intro-3"];
+
+        Assert.Equal("intro-4", CatalogSlug.MakeUnique("intro", taken.Contains));
+    }
+
+    [Fact]
+    public void IsDeterministicForTheSameInput()
+    {
+        HashSet<string> taken = ["intro"];
+
+        Assert.Equal(
+            CatalogSlug.MakeUnique("intro", taken.Contains),
+            CatalogSlug.MakeUnique("intro", taken.Contains));
+    }
+
+    [Fact]
+    public void KeepsTheNumberedSlugWithinTheColumnWidth()
+    {
+        string candidate = new('a', CatalogSlug.MaxLength);
+        string numbered = CatalogSlug.MakeUnique(candidate, taken => taken == candidate);
+
+        Assert.True(numbered.Length <= CatalogSlug.MaxLength);
+        Assert.True(CatalogSlug.IsValid(numbered));
+        Assert.EndsWith("-2", numbered, StringComparison.Ordinal);
+    }
+}
+
+/// <summary>
 /// The opaque row-version token. A caller must round-trip exactly what it was given; anything
 /// else is refused before a write is attempted.
 /// </summary>

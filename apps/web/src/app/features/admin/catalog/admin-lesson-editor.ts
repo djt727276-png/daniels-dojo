@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -6,8 +6,14 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { RouterLink } from '@angular/router';
 
 import { AdminCatalogApi } from '../../../core/admin/admin-catalog-api';
+import {
+  LessonVideoStatus,
+  describeVideoStatus,
+  videoStatusTone,
+} from '../../../core/admin/admin-media-api';
 import {
   AdminCourseDetail,
   AdminLesson,
@@ -31,6 +37,7 @@ import { confirmStatusChange, transitionLabel } from './status-actions';
   selector: 'app-admin-lesson-editor',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -105,16 +112,6 @@ import { confirmStatusChange, transitionLabel } from './status-actions';
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="lesson__field">
-              <mat-label>Slug</mat-label>
-              <input matInput formControlName="slug" />
-              @if (lesson().status === 'Published') {
-                <mat-hint>Return the lesson to draft before renaming it.</mat-hint>
-              }
-            </mat-form-field>
-          </div>
-
-          <div class="lesson__row">
-            <mat-form-field appearance="outline" class="lesson__field">
               <mat-label>Type</mat-label>
               <mat-select formControlName="lessonType">
                 @for (option of lessonTypes; track option.value) {
@@ -122,17 +119,7 @@ import { confirmStatusChange, transitionLabel } from './status-actions';
                 }
               </mat-select>
             </mat-form-field>
-
-            <mat-form-field appearance="outline" class="lesson__field">
-              <mat-label>Estimated duration (seconds)</mat-label>
-              <input matInput type="number" min="0" formControlName="estimatedDurationSeconds" />
-            </mat-form-field>
           </div>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Summary</mat-label>
-            <input matInput formControlName="summary" />
-          </mat-form-field>
 
           @if (form.controls.lessonType.value === 'Article') {
             <mat-form-field appearance="outline">
@@ -146,12 +133,72 @@ import { confirmStatusChange, transitionLabel } from './status-actions';
               <mat-hint>Required before an article lesson can be published.</mat-hint>
             </mat-form-field>
           } @else {
-            <p class="lesson__note">
-              Video status:
-              {{ lesson().videoStatus ?? 'no asset yet' }}. A video lesson can only be published
-              once its asset is ready.
-            </p>
+            <!--
+              The media area. Uploading happens in the media workspace, which owns the
+              authorise → write to storage → verify → process sequence; this panel exists so an
+              author never has to know that workspace exists to find it.
+            -->
+            <section class="video" aria-labelledby="video-heading-{{ lesson().id }}">
+              <div class="video__header">
+                <h4 class="video__heading" [id]="'video-heading-' + lesson().id">Video</h4>
+                <app-status-chip
+                  [label]="videoLabel()"
+                  [tone]="videoTone()"
+                  srPrefix="Video status"
+                />
+              </div>
+
+              <p class="video__detail">{{ videoDetail() }}</p>
+
+              <div class="video__actions">
+                <a
+                  matButton="filled"
+                  [routerLink]="['/admin/lessons', lesson().id, 'media']"
+                  [attr.data-testid]="'lesson-video-' + lesson().slug"
+                >
+                  {{ hasVideo() ? 'Manage video' : 'Upload video' }}
+                </a>
+                @if (videoFailed()) {
+                  <span class="video__hint">
+                    The stored master is kept, so processing can be retried there.
+                  </span>
+                }
+              </div>
+            </section>
           }
+
+          <mat-form-field appearance="outline">
+            <mat-label>Summary</mat-label>
+            <input matInput formControlName="summary" />
+          </mat-form-field>
+
+          <!--
+            Everything below is machinery rather than authoring: the URL segment the server
+            derived from the title, and the duration estimate. Collapsed so the common path
+            stays short, but reachable because a live URL sometimes has to be corrected.
+          -->
+          <details class="lesson__advanced">
+            <summary class="lesson__advanced-summary">Advanced</summary>
+
+            <div class="lesson__row lesson__advanced-body">
+              <mat-form-field appearance="outline" class="lesson__field">
+                <mat-label>URL segment</mat-label>
+                <input matInput formControlName="slug" [attr.data-testid]="'lesson-slug-input'" />
+                @if (lesson().status === 'Published') {
+                  <mat-hint>Return the lesson to draft before changing its address.</mat-hint>
+                } @else {
+                  <mat-hint
+                    >Generated from the title. Changing it changes the lesson's link.</mat-hint
+                  >
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="lesson__field">
+                <mat-label>Estimated duration (seconds)</mat-label>
+                <input matInput type="number" min="0" formControlName="estimatedDurationSeconds" />
+              </mat-form-field>
+            </div>
+          </details>
 
           <mat-checkbox formControlName="isPreview">Offer as a free preview</mat-checkbox>
 
@@ -246,7 +293,63 @@ import { confirmStatusChange, transitionLabel } from './status-actions';
       color: var(--dd-danger);
     }
 
-    .lesson__note {
+    .lesson__advanced {
+      border-top: 1px solid var(--dd-outline);
+      padding-top: var(--dd-space-3);
+    }
+
+    .lesson__advanced-summary {
+      cursor: pointer;
+      font-size: var(--dd-text-sm);
+      font-weight: var(--dd-weight-medium);
+      color: var(--dd-on-surface-variant);
+      min-height: 2.25rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .lesson__advanced-body {
+      padding-top: var(--dd-space-3);
+    }
+
+    /* The media panel: the one place an author looks for their video. */
+    .video {
+      display: flex;
+      flex-direction: column;
+      gap: var(--dd-space-3);
+      padding: var(--dd-space-4);
+      border: 1px solid var(--dd-outline);
+      border-radius: var(--dd-radius-lg);
+      background: var(--dd-surface-variant);
+    }
+
+    .video__header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--dd-space-3);
+    }
+
+    .video__heading {
+      margin: 0;
+      font-size: var(--dd-text-title);
+      font-weight: var(--dd-weight-semibold);
+    }
+
+    .video__detail {
+      margin: 0;
+      color: var(--dd-on-surface-variant);
+    }
+
+    .video__actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--dd-space-3);
+    }
+
+    .video__hint {
+      font-size: var(--dd-text-sm);
       color: var(--dd-on-surface-variant);
     }
   `,
@@ -267,6 +370,13 @@ export class AdminLessonEditor {
   /** Whether the lesson is already at the bottom of its section. */
   readonly isLast = input(false);
 
+  /**
+   * Opens the editor as soon as the row appears. Set for a lesson the author just created, so
+   * creating one lands them in its editor — where the video upload lives — rather than back
+   * at an empty form.
+   */
+  readonly openOnArrival = input(false);
+
   /** Emits the refreshed course after any successful mutation. */
   readonly changed = output<AdminCourseDetail>();
 
@@ -285,6 +395,23 @@ export class AdminLessonEditor {
 
   protected readonly transitions = computed(() => allowedTransitions(this.lesson().status));
 
+  /**
+   * The lesson's video state, read from the course detail the catalog already returns — no
+   * extra request per row, so a section of thirty lessons still loads in one call.
+   */
+  private readonly videoStatus = computed<LessonVideoStatus>(
+    () => (this.lesson().videoStatus as LessonVideoStatus | null) ?? 'None',
+  );
+
+  protected readonly hasVideo = computed(() => this.videoStatus() !== 'None');
+  protected readonly videoFailed = computed(() => this.videoStatus() === 'Failed');
+  protected readonly videoTone = computed(() => videoStatusTone(this.videoStatus()));
+  protected readonly videoDetail = computed(() => describeVideoStatus(this.videoStatus()));
+
+  protected readonly videoLabel = computed(() =>
+    this.videoStatus() === 'None' ? 'No video' : this.videoStatus(),
+  );
+
   protected readonly form = new FormGroup({
     slug: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -295,23 +422,43 @@ export class AdminLessonEditor {
     estimatedDurationSeconds: new FormControl<number | null>(null),
   });
 
-  protected toggle(): void {
-    const next = !this.open();
-    this.open.set(next);
-    this.message.set(null);
+  /** Guards the auto-open so a closed editor is never reopened by a later refresh. */
+  private autoOpened = false;
 
-    if (next) {
-      const lesson = this.lesson();
-      this.form.setValue({
-        slug: lesson.slug,
-        title: lesson.title,
-        summary: lesson.summary ?? '',
-        lessonType: lesson.lessonType,
-        bodyMarkdown: lesson.bodyMarkdown ?? '',
-        isPreview: lesson.isPreview,
-        estimatedDurationSeconds: lesson.estimatedDurationSeconds,
-      });
+  constructor() {
+    effect(() => {
+      if (this.openOnArrival() && !this.autoOpened) {
+        this.autoOpened = true;
+        this.openWith();
+      }
+    });
+  }
+
+  protected toggle(): void {
+    if (this.open()) {
+      this.open.set(false);
+      this.message.set(null);
+      return;
     }
+
+    this.openWith();
+  }
+
+  /** Opens the editor with the form loaded from the current lesson. */
+  private openWith(): void {
+    const lesson = this.lesson();
+
+    this.open.set(true);
+    this.message.set(null);
+    this.form.setValue({
+      slug: lesson.slug,
+      title: lesson.title,
+      summary: lesson.summary ?? '',
+      lessonType: lesson.lessonType,
+      bodyMarkdown: lesson.bodyMarkdown ?? '',
+      isPreview: lesson.isPreview,
+      estimatedDurationSeconds: lesson.estimatedDurationSeconds,
+    });
   }
 
   protected save(): void {

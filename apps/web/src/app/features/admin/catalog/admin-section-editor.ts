@@ -144,6 +144,7 @@ import { confirmStatusChange, transitionLabel } from './status-actions';
                   [lesson]="lesson"
                   [isFirst]="index === 0"
                   [isLast]="index === orderedLessons().length - 1"
+                  [openOnArrival]="lesson.id === createdLessonId()"
                   (changed)="changed.emit($event)"
                   (moveUp)="moveLesson(index, index - 1)"
                   (moveDown)="moveLesson(index, index + 1)"
@@ -153,15 +154,14 @@ import { confirmStatusChange, transitionLabel } from './status-actions';
           </div>
         }
 
+        <!--
+          Title and type only. The URL segment is derived from the title by the server, and can
+          still be corrected under Advanced in the lesson's own editor.
+        -->
         <form class="section__new-lesson" [formGroup]="lessonForm" (ngSubmit)="addLesson()">
           <mat-form-field appearance="outline" class="section__new-field">
             <mat-label>New lesson title</mat-label>
             <input matInput formControlName="title" [attr.data-testid]="'new-lesson-title'" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="section__new-field">
-            <mat-label>Slug</mat-label>
-            <input matInput formControlName="slug" [attr.data-testid]="'new-lesson-slug'" />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="section__new-field">
@@ -280,9 +280,15 @@ export class AdminSectionEditor {
 
   protected readonly lessonForm = new FormGroup({
     title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    slug: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     lessonType: new FormControl<LessonType>('Article', { nonNullable: true }),
   });
+
+  /**
+   * The lesson created by the last submission, so its editor opens by itself. Creating a
+   * lesson and then hunting for its Edit button is the step where an author loses the thread —
+   * particularly for a video, whose upload lives inside that editor.
+   */
+  protected readonly createdLessonId = signal<string | null>(null);
 
   protected toggleEdit(): void {
     const next = !this.editing();
@@ -334,10 +340,11 @@ export class AdminSectionEditor {
     }
 
     const value = this.lessonForm.getRawValue();
+    const existing = new Set(this.section().lessons.map((lesson) => lesson.id));
 
     this.run(
       this.api.createLesson(this.courseId(), this.section().id, {
-        slug: value.slug.trim(),
+        // No slug: the server derives one from the title.
         title: value.title.trim(),
         summary: null,
         lessonType: value.lessonType,
@@ -345,7 +352,16 @@ export class AdminSectionEditor {
         isPreview: false,
         estimatedDurationSeconds: null,
       }),
-      () => this.lessonForm.reset({ title: '', slug: '', lessonType: 'Article' }),
+      (course) => {
+        this.lessonForm.reset({ title: '', lessonType: 'Article' });
+
+        // The response carries the whole course, so the new lesson is the one this section
+        // did not have a moment ago.
+        const section = course.sections.find((item) => item.id === this.section().id);
+        const created = section?.lessons.find((lesson) => !existing.has(lesson.id));
+
+        this.createdLessonId.set(created?.id ?? null);
+      },
     );
   }
 
@@ -372,14 +388,17 @@ export class AdminSectionEditor {
     );
   }
 
-  private run(request: ReturnType<AdminCatalogApi['updateSection']>, onSuccess?: () => void): void {
+  private run(
+    request: ReturnType<AdminCatalogApi['updateSection']>,
+    onSuccess?: (course: AdminCourseDetail) => void,
+  ): void {
     this.busy.set(true);
     this.message.set(null);
 
     request.subscribe({
       next: (course) => {
         this.busy.set(false);
-        onSuccess?.();
+        onSuccess?.(course);
         this.changed.emit(course);
       },
       error: (error: unknown) => {

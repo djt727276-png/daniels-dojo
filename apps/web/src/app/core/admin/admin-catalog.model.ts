@@ -148,7 +148,11 @@ export interface UpdateSectionRequest extends CreateSectionRequest {
 
 /** Creates a lesson. */
 export interface CreateLessonRequest {
-  readonly slug: string;
+  /**
+   * Omitted by the authoring UI: the server derives the URL segment from the title. Supplied
+   * only where a specific segment is genuinely needed.
+   */
+  readonly slug?: string;
   readonly title: string;
   readonly summary: string | null;
   readonly lessonType: LessonType;
