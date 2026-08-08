@@ -544,23 +544,35 @@ internal sealed class AdminCatalogService : IAdminCatalogService
             return Fail(OperationResult.NotFound());
         }
 
+        // An omitted slug is derived from the title; a supplied one is still held to the
+        // published rule, so nothing an author typed is quietly rewritten.
+        bool deriveSlug = string.IsNullOrWhiteSpace(request.Slug);
+
         var validation = new ValidationBuilder();
         ValidateLessonFields(
             validation,
-            request.Slug,
+            deriveSlug ? null : request.Slug,
             request.Title,
             request.Summary,
             request.LessonType,
-            request.EstimatedDurationSeconds);
+            request.EstimatedDurationSeconds,
+            validateSlug: !deriveSlug);
 
         if (validation.HasErrors)
         {
             return Fail(validation.ToResult());
         }
 
-        string slug = request.Slug.Trim();
+        bool IsTaken(string candidate) => course.Lessons.Any(
+            lesson => string.Equals(lesson.Slug, candidate, StringComparison.OrdinalIgnoreCase));
 
-        if (course.Lessons.Any(lesson => string.Equals(lesson.Slug, slug, StringComparison.OrdinalIgnoreCase)))
+        string slug = deriveSlug
+            ? CatalogSlug.MakeUnique(CatalogSlug.FromTitle(request.Title), IsTaken)
+            : request.Slug!.Trim();
+
+        // A derived slug is already unique by construction; a supplied one is checked, because
+        // the author chose it and deserves to be told rather than silently renumbered.
+        if (!deriveSlug && IsTaken(slug))
         {
             return Fail(OperationResult.Invalid(
                 ErrorCodes.DuplicateValue,
@@ -1054,16 +1066,24 @@ internal sealed class AdminCatalogService : IAdminCatalogService
                 "Choose a valid level.");
     }
 
+    /// <param name="validateSlug">
+    /// False only on creation when no slug was supplied, because the service derives one from
+    /// the title. Every other path still holds a slug to the published rule.
+    /// </param>
     private static void ValidateLessonFields(
         ValidationBuilder validation,
         string? slug,
         string? title,
         string? summary,
         string? lessonType,
-        int? estimatedDurationSeconds)
+        int? estimatedDurationSeconds,
+        bool validateSlug = true)
     {
         validation
-            .When(!CatalogSlug.IsValid(slug?.Trim()), "slug", CatalogSlug.Requirement)
+            .When(
+                validateSlug && !CatalogSlug.IsValid(slug?.Trim()),
+                "slug",
+                CatalogSlug.Requirement)
             .Required("title", title, 200, "Title")
             .Optional("summary", summary, 512, "Summary")
             .When(

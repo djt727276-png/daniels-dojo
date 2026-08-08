@@ -11,11 +11,12 @@ import {
   LessonPlaybackGrant,
   LessonVideoView,
   describeVideoStatus,
+  videoStatusTone,
 } from '../../../core/admin/admin-media-api';
 import { toApiFailure } from '../../../core/api/problem-details';
 import { PageHeader } from '../../../shared/ui/page-header/page-header';
 import { ErrorState, LoadingState } from '../../../shared/ui/state-views/state-views';
-import { StatusChip, StatusTone } from '../../../shared/ui/status-chip/status-chip';
+import { StatusChip } from '../../../shared/ui/status-chip/status-chip';
 
 type ScreenState =
   | { readonly kind: 'loading' }
@@ -27,25 +28,6 @@ interface VerificationStep {
   readonly label: string;
   readonly done: boolean;
   readonly detail: string;
-}
-
-/** Maps a pipeline state to a chip tone. */
-function videoTone(status: LessonVideoView['status']): StatusTone {
-  switch (status) {
-    case 'Ready':
-      return 'success';
-    case 'Failed':
-      return 'danger';
-    case 'Replacing':
-    case 'Processing':
-    case 'MuxIngesting':
-      return 'info';
-    case 'None':
-    case 'Archived':
-      return 'neutral';
-    default:
-      return 'warning';
-  }
 }
 
 /** Human-readable byte count. */
@@ -92,7 +74,7 @@ export class AdminLessonMedia {
   private readonly api = inject(AdminMediaApi);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly tone = videoTone;
+  protected readonly tone = videoStatusTone;
   protected readonly bytes = formatBytes;
   protected readonly describe = describeVideoStatus;
   protected readonly acceptedTypes = ACCEPTED_VIDEO_TYPES.join(',');

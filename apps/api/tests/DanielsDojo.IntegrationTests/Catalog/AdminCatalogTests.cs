@@ -515,6 +515,150 @@ public sealed class AdminCatalogTests(SqlServerDatabaseFixture fixture) : IAsync
         Assert.Equal(["beta", "alpha"], Lessons(reordered).Select(lesson => lesson.Slug).ToArray());
     }
 
+    // ------------------------------------------------- lesson slugs from titles
+
+    /// <remarks>
+    /// The authoring UI sends no slug at all: an author names a lesson, and the URL segment is
+    /// derived server-side. These cases pin that derivation, because the result becomes a
+    /// public preview URL the moment the lesson is published.
+    /// </remarks>
+    [Fact]
+    public async Task CreateLesson_DerivesTheSlugFromTheTitle_WhenNoneIsSupplied()
+    {
+        using HttpClient client = AdminClient();
+        CourseHandle course = await CreateCourseAsync(client, "derived-slug-course");
+        using JsonDocument sectionDoc = await AddSectionAsync(client, course.Id, "Only section");
+        Guid sectionId = FirstSectionId(sectionDoc);
+
+        using JsonDocument created = await client.SendJsonAsync(
+            HttpMethod.Post,
+            $"{Base}/courses/{course.Id}/sections/{sectionId}/lessons",
+            TitledLesson("Introduction to C#"),
+            HttpStatusCode.OK);
+
+        Assert.Equal(["introduction-to-csharp"], Lessons(created).Select(lesson => lesson.Slug).ToArray());
+    }
+
+    [Fact]
+    public async Task CreateLesson_NumbersDerivedSlugs_WhenTwoLessonsShareATitle()
+    {
+        using HttpClient client = AdminClient();
+        CourseHandle course = await CreateCourseAsync(client, "repeated-title-course");
+        using JsonDocument sectionDoc = await AddSectionAsync(client, course.Id, "Only section");
+        Guid sectionId = FirstSectionId(sectionDoc);
+
+        await client.SendJsonAsync(
+            HttpMethod.Post,
+            $"{Base}/courses/{course.Id}/sections/{sectionId}/lessons",
+            TitledLesson("Recap"),
+            HttpStatusCode.OK);
+        using JsonDocument second = await client.SendJsonAsync(
+            HttpMethod.Post,
+            $"{Base}/courses/{course.Id}/sections/{sectionId}/lessons",
+            TitledLesson("Recap"),
+            HttpStatusCode.OK);
+
+        // Both survive, with distinct segments, and neither creation was refused.
+        Assert.Equal(["recap", "recap-2"], Lessons(second).Select(lesson => lesson.Slug).ToArray());
+    }
+
+    [Fact]
+    public async Task CreateLesson_StillHonoursAnExplicitSlug()
+    {
+        using HttpClient client = AdminClient();
+        CourseHandle course = await CreateCourseAsync(client, "explicit-slug-course");
+        using JsonDocument sectionDoc = await AddSectionAsync(client, course.Id, "Only section");
+        Guid sectionId = FirstSectionId(sectionDoc);
+
+        using JsonDocument created = await client.SendJsonAsync(
+            HttpMethod.Post,
+            $"{Base}/courses/{course.Id}/sections/{sectionId}/lessons",
+            NewLesson("hand-picked-segment"),
+            HttpStatusCode.OK);
+
+        Assert.Equal(["hand-picked-segment"], Lessons(created).Select(lesson => lesson.Slug).ToArray());
+    }
+
+    [Fact]
+    public async Task CreateLesson_RejectsAnInvalidExplicitSlug()
+    {
+        using HttpClient client = AdminClient();
+        CourseHandle course = await CreateCourseAsync(client, "bad-explicit-slug-course");
+        using JsonDocument sectionDoc = await AddSectionAsync(client, course.Id, "Only section");
+        Guid sectionId = FirstSectionId(sectionDoc);
+
+        using JsonDocument problem = await client.SendJsonAsync(
+            HttpMethod.Post,
+            $"{Base}/courses/{course.Id}/sections/{sectionId}/lessons",
+            NewLesson("Not A Valid Slug"),
+            HttpStatusCode.BadRequest);
+
+        Assert.True(problem.RootElement.GetProperty("errors").TryGetProperty("slug", out _));
+    }
+
+    [Fact]
+    public async Task CreateLesson_RejectsADuplicateExplicitSlug()
+    {
+        using HttpClient client = AdminClient();
+        CourseHandle course = await CreateCourseAsync(client, "duplicate-explicit-slug-course");
+        using JsonDocument sectionDoc = await AddSectionAsync(client, course.Id, "Only section");
+        Guid sectionId = FirstSectionId(sectionDoc);
+
+        await client.SendJsonAsync(
+            HttpMethod.Post,
+            $"{Base}/courses/{course.Id}/sections/{sectionId}/lessons",
+            NewLesson("taken-segment"),
+            HttpStatusCode.OK);
+
+        using JsonDocument problem = await client.SendJsonAsync(
+            HttpMethod.Post,
+            $"{Base}/courses/{course.Id}/sections/{sectionId}/lessons",
+            NewLesson("taken-segment"),
+            HttpStatusCode.BadRequest);
+
+        Assert.True(problem.RootElement.GetProperty("errors").TryGetProperty("slug", out _));
+    }
+
+    /// <summary>
+    /// Renaming a lesson must not move its URL. An existing slug is only ever changed by an
+    /// explicit edit, which the published-slug rule guards separately.
+    /// </summary>
+    [Fact]
+    public async Task UpdateLesson_LeavesTheSlugAloneWhenOnlyTheTitleChanges()
+    {
+        using HttpClient client = AdminClient();
+        CourseHandle course = await CreateCourseAsync(client, "stable-slug-course");
+        using JsonDocument sectionDoc = await AddSectionAsync(client, course.Id, "Only section");
+        Guid sectionId = FirstSectionId(sectionDoc);
+
+        using JsonDocument created = await client.SendJsonAsync(
+            HttpMethod.Post,
+            $"{Base}/courses/{course.Id}/sections/{sectionId}/lessons",
+            TitledLesson("Original Title"),
+            HttpStatusCode.OK);
+
+        LessonHandle lesson = Lessons(created).Single();
+        Assert.Equal("original-title", lesson.Slug);
+
+        using JsonDocument renamed = await client.SendJsonAsync(
+            HttpMethod.Put,
+            $"{Base}/courses/{course.Id}/lessons/{lesson.Id}",
+            new
+            {
+                lesson.Slug,
+                Title = "A Completely Different Title",
+                Summary = (string?)null,
+                LessonType = "Article",
+                BodyMarkdown = "Body content for the lesson.",
+                IsPreview = false,
+                EstimatedDurationSeconds = 120,
+                lesson.RowVersion,
+            },
+            HttpStatusCode.OK);
+
+        Assert.Equal(["original-title"], Lessons(renamed).Select(item => item.Slug).ToArray());
+    }
+
     // ---------------------------------------------------------------- audit
 
     [Fact]
@@ -630,6 +774,18 @@ public sealed class AdminCatalogTests(SqlServerDatabaseFixture fixture) : IAsync
         Title = $"Lesson {slug}",
         Summary = (string?)null,
         LessonType = "Article",
+        BodyMarkdown = "Body content for the lesson.",
+        IsPreview = false,
+        EstimatedDurationSeconds = 120,
+    };
+
+    /// <summary>A creation payload shaped like the authoring UI's: a title and no slug.</summary>
+    private static object TitledLesson(string title, string lessonType = "Article") => new
+    {
+        Slug = (string?)null,
+        Title = title,
+        Summary = (string?)null,
+        LessonType = lessonType,
         BodyMarkdown = "Body content for the lesson.",
         IsPreview = false,
         EstimatedDurationSeconds = 120,

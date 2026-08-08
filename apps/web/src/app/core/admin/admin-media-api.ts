@@ -2,6 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
+import { StatusTone } from '../../shared/ui/status-chip/status-chip';
 import { API_BASE_PATH } from '../configuration/app-config';
 
 /** Where a lesson's video is in the pipeline. */
@@ -122,6 +123,28 @@ export const ACCEPTED_VIDEO_TYPES = [
 
 /** Caption types the API accepts. */
 export const ACCEPTED_CAPTION_TYPES = ['text/vtt', 'application/x-subrip'] as const;
+
+/**
+ * Semantic tone for each pipeline state, so the lesson editor and the media workspace can
+ * never disagree about whether a status reads as healthy, busy, or broken.
+ */
+export function videoStatusTone(status: LessonVideoStatus): StatusTone {
+  switch (status) {
+    case 'Ready':
+      return 'success';
+    case 'Failed':
+      return 'danger';
+    case 'Replacing':
+    case 'Processing':
+    case 'MuxIngesting':
+      return 'info';
+    case 'None':
+    case 'Archived':
+      return 'neutral';
+    default:
+      return 'warning';
+  }
+}
 
 /** Plain-language wording for each pipeline state. */
 export function describeVideoStatus(status: LessonVideoStatus): string {

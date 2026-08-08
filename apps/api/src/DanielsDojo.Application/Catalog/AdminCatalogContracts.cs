@@ -105,8 +105,13 @@ public sealed record CreateSectionRequest(string Title, string? Description);
 public sealed record UpdateSectionRequest(string Title, string? Description, string RowVersion);
 
 /// <summary>Creates a Draft lesson.</summary>
+/// <param name="Slug">
+/// Optional. Left empty, the slug is derived from the title, which is what the authoring UI
+/// does — an author names a lesson, not a URL segment. Supplied explicitly, it is validated
+/// exactly as before, so a caller that needs a specific segment still gets one.
+/// </param>
 public sealed record CreateLessonRequest(
-    string Slug,
+    string? Slug,
     string Title,
     string? Summary,
     string LessonType,
